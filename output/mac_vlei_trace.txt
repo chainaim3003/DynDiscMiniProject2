@@ -1,0 +1,2529 @@
+zenitsu@Aathithyas-MacBook-Pro legentvLEI_current % ./setup.sh
+╔══════════════════════════════════════════════════════════════╗
+║         vLEI Workshop Environment Setup                      ║
+║         Version 2.1 - With Schema SAIDification              ║
+╚══════════════════════════════════════════════════════════════╝
+
+[1/6] Copying project files from Windows to Linux...
+
+[2/6] Installing system dependencies...
+✔︎ JSON API cask.jws.json                                                                                                    Downloaded   15.4MB/ 15.4MB
+✔︎ JSON API formula.jws.json                                                                                                 Downloaded   32.0MB/ 32.0MB
+Warning: dos2unix 7.5.4 is already installed and up-to-date.
+To reinstall 7.5.4, run:
+  brew reinstall dos2unix
+Warning: python@3.14 3.14.3_1 is already installed and up-to-date.
+To reinstall 3.14.3_1, run:
+  brew reinstall python@3.14
+Warning: jq 1.8.1 is already installed and up-to-date.
+To reinstall 1.8.1, run:
+  brew reinstall jq
+Warning: curl 8.19.0 is already installed and up-to-date.
+To reinstall 8.19.0, run:
+  brew reinstall curl
+  ✓ Dependencies installed
+
+  ✓ Installed: dos2unix, python3, jq, curl
+
+[3/6] Fixing Windows line endings...
+  ✓ Fixed .sh files
+  ✓ Fixed .ts files
+  ✓ Fixed .json files
+  ✓ Fixed .yml/.yaml files
+  ✓ Fixed Dockerfile files
+  ✓ Fixed .py files
+
+[4/6] Making shell scripts executable...
+  ✓ All .sh files are now executable
+
+[5/6] Verifying and fixing schema configuration...
+  ✓ Invoice schema has $id: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+  ✓ SAID-named schema file exists
+  ✓ Config SAID: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+
+[6/6] Building Docker images...
+  Building tsx-shell container (with --no-cache)...
+#15 DONE 2.0s
+
+#16 resolving provenance for metadata file
+#16 DONE 0.0s
+ gleif/wkshp-tsx-shell:latest  Built
+  Building vlei-verification service...
+#12 resolving provenance for metadata file
+#12 DONE 0.0s
+ legentvlei_current-vlei-verification  Built
+  ✓ Docker images built successfully
+
+╔══════════════════════════════════════════════════════════════╗
+║                    ✓ SETUP COMPLETE                          ║
+╚══════════════════════════════════════════════════════════════╝
+
+All preparations complete! Your environment is ready.
+
+NEXT STEPS:
+
+  1. Deploy the services:
+     ./deploy.sh
+
+  2. Wait for services to be healthy (~30 seconds)
+
+  3. Run the vLEI workflow:
+     ./run-all-buyerseller-4C-with-agents.sh
+
+────────────────────────────────────────────────────────────────
+QUICK REFERENCE:
+
+  Stop everything:      ./stop.sh
+  Fresh start:          ./stop.sh && ./setup.sh && ./deploy.sh
+  SAIDify schema:       ./saidify-with-docker.sh
+  Run workflow:         ./run-all-buyerseller-4C-with-agents.sh
+
+────────────────────────────────────────────────────────────────
+IMPORTANT FILES:
+
+  Schema config:      ./appconfig/schemaSaids.json
+  Invoice schema:     ./schemas/self-attested-invoice.json
+  Workflow script:    ./run-all-buyerseller-4C-with-agents.sh
+  Task data:          ./task-data/
+
+zenitsu@Aathithyas-MacBook-Pro legentvLEI_current % ./deploy.sh
+╔══════════════════════════════════════════════════════════════╗
+║         vLEI Workshop Infrastructure Deployment              ║
+╚══════════════════════════════════════════════════════════════╝
+
+[0/5] Pre-flight checks...
+  ✓ Docker available
+  ✓ docker compose available
+  ✓ tsx-shell image ready
+
+[1/5] Creating Docker network...
+c1976c5eb7f2d9ad327adbfbb452410e4b16e48378f151c4cb99cbcf2456f975
+  ✓ Network vlei_workshop created
+
+[2/5] Cleaning up existing containers...
+  ✓ Existing containers removed
+
+[3/5] Starting services...
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+[+] Running 11/11
+ ✔ Volume legentvlei_current_verifier-vol   Created                                                                                               0.0s 
+ ✔ Volume legentvlei_current_shell-vol      Created                                                                                               0.0s 
+ ✔ Volume legentvlei_current_keria-vol      Created                                                                                               0.0s 
+ ✔ Container tsx_shell                      Healthy                                                                                              18.1s 
+ ✔ Container legentvlei_current-schema-1    Healthy                                                                                              18.1s 
+ ✔ Container legentvlei_current-resource-1  Healthy                                                                                              18.1s 
+ ✔ Container vlei_shell                     Healthy                                                                                              18.1s 
+ ✔ Container legentvlei_current-witness-1   Healthy                                                                                              18.0s 
+ ✔ Container legentvlei_current-verifier-1  Healthy                                                                                              17.9s 
+ ✔ Container legentvlei_current-keria-1     Healthy                                                                                              17.9s 
+ ✔ Container vlei_verification              Healthy                                                                                              22.8s 
+  ✓ All services started
+
+[4/5] Running health checks...
+
+  Schema Server:
+    ✓ Schema server healthy
+    ✓ Invoice schema accessible (EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu)
+  Witnesses:
+    ✓ Witness wan (port 5642)
+    ✓ Witness wil (port 5643)
+    ✓ Witness wes (port 5644)
+    ✓ Witness wit (port 5645)
+    ✓ Witness wub (port 5646)
+    ✓ Witness wyz (port 5647)
+  KERIA:
+    ✓ KERIA healthy
+  Verifier (Sally):
+    ✓ Verifier healthy
+  Webhook:
+    ✓ Webhook healthy
+  tsx-shell:
+    ✗ tsx-shell not running
+
+[5/5] Deployment summary...
+
+╔══════════════════════════════════════════════════════════════╗
+║              ✓ DEPLOYMENT COMPLETE                           ║
+╚══════════════════════════════════════════════════════════════╝
+
+Service URLs:
+  Schema server:    http://127.0.0.1:7723
+  Witnesses:        http://127.0.0.1:5642 - 5647
+  KERIA Admin:      http://127.0.0.1:3901
+  KERIA HTTP:       http://127.0.0.1:3902
+  KERIA Boot:       http://127.0.0.1:3903
+  Verifier:         http://127.0.0.1:9723
+  Webhook:          http://127.0.0.1:9923
+
+Invoice Schema:
+  SAID: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+  OOBI: http://127.0.0.1:7723/oobi/EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+
+Next steps:
+  Run the vLEI workflow:
+    ./run-all-buyerseller-4C-with-agents.sh
+
+  Or run individual test:
+    ./test-agent-verification.sh
+
+To stop:
+    ./stop.sh
+
+zenitsu@Aathithyas-MacBook-Pro legentvLEI_current % ./saidify-and-restart.sh
+╔══════════════════════════════════════════════════════════════╗
+║         SAIDify Schema and Restart Container                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+[0/3] Pre-flight checks...
+  ✓ Docker is running
+  ✓ Schema container is running
+  ✓ saidify-with-docker.sh exists
+
+[1/3] SAIDifying invoice schema...
+
+╔════════════════════════════════════════════════════════════╗
+║    SAIDify Invoice Schema using Docker (keripy method)     ║
+╚════════════════════════════════════════════════════════════╝
+
+✓ Found schema file: ./schemas/self-attested-invoice.json
+✓ Docker is running
+✓ Using image: 
+gleif/vlei:1.0.1
+
+[1/4] SAIDifying schema using keripy in Docker...
+Successfully copied 5.12kB to legentvlei-schema-1:/tmp/saidify_schema.py
+Error response from daemon: No such container: legentvlei-schema-1
+zenitsu@Aathithyas-MacBook-Pro legentvLEI_current % ./run-all-buyerseller-4D-with-subdelegation.sh                                  
+════════════════════════════════════════════════════════════
+  vLEI System v4D - With Sub-Delegation
+  jupiterSellerAgent → JupiterTreasuryAgent
+════════════════════════════════════════════════════════════
+
+[Phase 1] Running base vLEI workflow (4C)...
+
+════════════════════════════════════════════════════════════
+  vLEI Configuration-Driven System
+  Buyer-Seller Credential Issuance
+  ✨ WITH UNIQUE AGENT BRAN SUPPORT
+  ✨ WITH INVOICE CREDENTIAL + IPEX GRANT/ADMIT
+════════════════════════════════════════════════════════════
+
+[1/8] Validating Configuration...
+✓ Configuration validated
+  Root: GLEIF_ROOT
+  QVI: QVI (LEI: )
+  Organizations: 2
+  Invoice Config: ./appconfig/invoiceConfig.json
+  Invoice Schema: ./schemas/self-attested-invoice.json
+
+[2/8] GEDA & QVI Setup...
+Creating root of trust and Qualified vLEI Issuer...
+
+→ Creating GEDA AID...
+Creating GEDA AID using SignifyTS and KERIA
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+GEDA info written to /task-data/geda-*
+   Prefix: EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge
+   OOBI: http://keria:3902/oobi/EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge/agent/EFWuzjNmNV-CWAQkjYZK3cxYZrKkZvdBMrPLR-TqMvvp
+→ Recreating verifier with GEDA AID...
+Recreating Verifier container with GEDA AID Prefix: EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+[+] Running 1/1
+ ✔ Container legentvlei_current-verifier-1  Removed                                                                                               1.3s 
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+[+] Running 3/3
+ ✔ Container legentvlei_current-schema-1    Healthy                                                                                               1.7s 
+ ✔ Container legentvlei_current-witness-1   Healthy                                                                                               1.7s 
+ ✔ Container legentvlei_current-verifier-1  Healthy                                                                                               6.7s 
+Verifier container recreated.
+→ Creating delegated QVI AID...
+Creating QVI AID as a delegate of GEDA using SignifyTS and KERIA
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+QVI info written to /task-data/qvi-delegate-info.json
+QVI AID created successfully
+Approving delegation from GEDA to QVI AID
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Delegator geda approved delegation of ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo: true
+Finishing delegation from GEDA to QVI AID
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+qvi delegate info {
+  aid: 'ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo',
+  icpOpName: 'delegation.ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo'
+}
+Finishing EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge delegation to qvi on op: delegation.ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo...
+Delegate data written to /task-data/qvi-info.json
+GEDA -> QVI AID delegation complete
+→ Resolving OOBI between GEDA and QVI...
+GEDA Resolving QVI OOBI: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+→ GEDA challenges QVI...
+GEDA generating challenge for QVI
+GEDA challenging QVI AID: ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+GEDA generating challenge for QVI: ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo
+Generated challenge with 12 words
+Challenge info written to /task-data/geda-challenge-info.json
+Challenge words: airport devote exist grant evil mean sponsor silly reform cannon image deputy
+Challenge generated successfully
+QVI responding to GEDA challenge
+QVI responding to GEDA AID: EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+QVI responding to GEDA challenge: EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge
+QVI responded to GEDA challenge with signed words
+QVI challenge response completed
+GEDA verifying QVI challenge response
+GEDA verifying QVI AID: ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+GEDA verifying QVI challenge response: ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo
+GEDA verified QVI challenge response
+GEDA marked QVI challenge response as accepted
+GEDA challenge verification completed
+→ QVI challenges GEDA...
+QVI generating challenge for GEDA
+QVI challenging GEDA AID: EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+QVI generating challenge for GEDA: EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge
+Generated challenge with 12 words
+Challenge info written to /task-data/qvi-challenge-info.json
+Challenge words: robust orange noodle tuna middle high later kingdom deposit guide mom miss
+Challenge generated successfully
+GEDA responding to QVI challenge
+GEDA responding to QVI AID: ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+GEDA responding to QVI challenge: ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo
+GEDA responded to QVI challenge with signed words
+GEDA challenge response completed
+QVI verifying GEDA challenge response
+QVI verifying GEDA AID: EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+QVI verifying GEDA challenge response: EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge
+QVI verified GEDA challenge response
+QVI marked GEDA challenge response as accepted
+QVI challenge verification completed
+→ Issuing QVI credential...
+Creating registry in GEDA AID
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Successfully created credential registry: ELgSrIoOBkNy3NpkljPOTR2d91pRIzK1wDIWE8b6YazQ
+Registry info written to /task-data/geda-registry-info.json
+Creating QVI ACDC Credential
+Issuing QVI credential to ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo with LEI 506700GE1G29325QX363
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Resolving schema OOBI http://schema:7723/oobi/EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao
+Issuing QVI credential schema EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao to ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo
+Cred data: { LEI: '506700GE1G29325QX363' }
+Credential data: {
+  i: 'EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge',
+  ri: 'ELgSrIoOBkNy3NpkljPOTR2d91pRIzK1wDIWE8b6YazQ',
+  s: 'EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao',
+  a: {
+    i: 'ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo',
+    dt: '2026-03-19T13:27:26.524000+00:00',
+    LEI: '506700GE1G29325QX363'
+  },
+  e: undefined,
+  r: undefined
+}
+IPEX Granting credential to issuee: ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo
+Grant message sent
+Grant result: {
+  name: 'exchange.EPuXqxEDScprS1P-yoFg3DYxpFpzpMZQmC3yNHWymDX-',
+  metadata: { said: 'EPuXqxEDScprS1P-yoFg3DYxpFpzpMZQmC3yNHWymDX-' },
+  done: true,
+  error: null,
+  response: { said: 'EPuXqxEDScprS1P-yoFg3DYxpFpzpMZQmC3yNHWymDX-' }
+}
+{
+  name: 'exchange.EPuXqxEDScprS1P-yoFg3DYxpFpzpMZQmC3yNHWymDX-',
+  metadata: { said: 'EPuXqxEDScprS1P-yoFg3DYxpFpzpMZQmC3yNHWymDX-' },
+  done: true,
+  error: null,
+  response: { said: 'EPuXqxEDScprS1P-yoFg3DYxpFpzpMZQmC3yNHWymDX-' }
+}
+QVI credential created and granted
+Admitting QVI ACDC with IPEX Grant SAID: EPuXqxEDScprS1P-yoFg3DYxpFpzpMZQmC3yNHWymDX-
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+AID "qvi" admitting IPEX grant "EPuXqxEDScprS1P-yoFg3DYxpFpzpMZQmC3yNHWymDX-" from AID "EOTV18EKRBJp5NAio3d51Rumq0mQGFnDGXSdV3S7R3ge"...
+Successfully submitted IPEX admit for grant "EPuXqxEDScprS1P-yoFg3DYxpFpzpMZQmC3yNHWymDX-".
+QVI IPEX Admit: {
+  operation: {
+    name: 'exchange.EP5-6VlBbNU_cueD6m2xB5rjrXhOHnBuhsu1Mfs1h8Rk',
+    metadata: { said: 'EP5-6VlBbNU_cueD6m2xB5rjrXhOHnBuhsu1Mfs1h8Rk' },
+    done: true,
+    error: null,
+    response: { said: 'EP5-6VlBbNU_cueD6m2xB5rjrXhOHnBuhsu1Mfs1h8Rk' }
+  }
+}
+QVI credential admitted: EDhdGlr2l_Q2UoHTOJjCFtWFZx6Zs0jeiytbIDQ0FOKr
+→ QVI presents credential to verifier...
+QVI Resolving Verifier (Sally) OOBI: 
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://verifier:9723/oobi
+Presenting QVI ACDC to verifier Credential SAID: EDhdGlr2l_Q2UoHTOJjCFtWFZx6Zs0jeiytbIDQ0FOKr
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Finding matching credentials with filter: { '-d': 'EDhdGlr2l_Q2UoHTOJjCFtWFZx6Zs0jeiytbIDQ0FOKr' }
+Found 1 matching credentials.
+IPEX Granting credential EDhdGlr2l_Q2UoHTOJjCFtWFZx6Zs0jeiytbIDQ0FOKr to EMrjKv0T43sslqFfhlEHC9v3t9UoxHWrGznQ1EveRXUO...
+{ said: 'EC3MZAHB5JmrmZPO0cefe9rdb42-ercR9-LxZuZHHanl' }
+✓ GEDA & QVI setup complete
+
+╔═══════════════════════════════════════════════════════════╗
+║  ✨ GENERATING UNIQUE AGENT BRANs                        ║
+╚═══════════════════════════════════════════════════════════╝
+
+[2.5/8] Pre-generating Unique Cryptographic Identities...
+
+This step creates unique BRANs for ALL agents BEFORE they are created.
+Each agent will have:
+  • Unique 256-bit BRAN (cryptographic seed)
+  • Unique AID derived from BRAN
+  • Delegation to appropriate OOR holder
+
+→ Generating unique BRANs from configuration...
+Generating Unique Agent BRANs...
+✓ Found 2 agent(s)
+→ Processing: jupiterSellerAgent
+  ✓ BRAN: AncvF4PUV0rndjkrKYZN...
+→ Processing: tommyBuyerAgent
+  ✓ BRAN: tferEeY4uAYawzX9mueV...
+✅ Complete! Generated 2 unique BRANs
+✓ All BRANs are unique
+✓ Unique BRANs pre-generated for all agents
+  Configuration saved to: task-data/agent-brans.json
+  Agent .env files created in: ../Legent/A2A/js/src/agents/*/   
+
+✓ Generated 2 unique agent BRANs
+
+[3/8] Processing Organizations...
+
+╔════════════════════════════════════════════════════════════════╗
+║  Organization: JUPITER KNITTING COMPANY
+║  LEI: 3358004DXAMRWRUIYJ05
+║  Alias: Jupiter_Knitting_Company
+║  Persons: 1
+╚════════════════════════════════════════════════════════════════╝
+
+  → Creating LE AID for JUPITER KNITTING COMPANY...
+Creating LE AID using SignifyTS and KERIA
+Using alias: Jupiter_Knitting_Company
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+LE info written to /task-data/le-*
+   Prefix: EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-
+   OOBI: http://keria:3902/oobi/EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+   Prefix: EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-
+   OOBI: http://keria:3902/oobi/EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+  → Resolving OOBI between LE and QVI...
+LE Resolving QVI OOBI: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+QVI Resolving LE OOBI: http://keria:3902/oobi/EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+  → Creating QVI registry for LE credentials...
+Creating registry in QVI AID
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Successfully created credential registry: ELSN4rdD6Tg3GV7q37yDNqJu9ls1eOthRM72Ibur9gEb
+Registry info written to /task-data/qvi-registry-info.json
+  → Issuing LE credential to JUPITER KNITTING COMPANY...
+    ✓ Using LEI 3358004DXAMRWRUIYJ05 from configuration
+Creating LE ACDC Credential
+Issuing LE credential to EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA- with LEI 3358004DXAMRWRUIYJ05 (from parameter)
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Resolving schema OOBI http://schema:7723/oobi/ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY
+Using QVI credential SAID for edge: EDhdGlr2l_Q2UoHTOJjCFtWFZx6Zs0jeiytbIDQ0FOKr
+Issuing LE credential schema ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY to EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-
+Cred data: { LEI: '3358004DXAMRWRUIYJ05' }
+Cred data: { LEI: '3358004DXAMRWRUIYJ05' }
+Credential data: {
+  i: 'ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo',
+  ri: 'ELSN4rdD6Tg3GV7q37yDNqJu9ls1eOthRM72Ibur9gEb',
+  s: 'ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY',
+  a: {
+    i: 'EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-',
+    dt: '2026-03-19T13:27:51.335000+00:00',
+    LEI: '3358004DXAMRWRUIYJ05'
+  },
+  e: {
+    d: '',
+    qvi: {
+      n: 'EDhdGlr2l_Q2UoHTOJjCFtWFZx6Zs0jeiytbIDQ0FOKr',
+      s: 'EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao'
+    }
+  },
+  r: {
+    d: '',
+    usageDisclaimer: {
+      l: 'Usage of a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, does not assert that the Legal Entity is trustworthy, honest, reputable in its business dealings, safe to do business with, or compliant with any laws or that an implied or expressly intended purpose will be fulfilled.'
+    },
+    issuanceDisclaimer: {
+      l: 'All information in a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, is accurate as of the date the validation process was complete. The vLEI Credential has been issued to the legal entity or person named in the vLEI Credential as the subject; and the qualified vLEI Issuer exercised reasonable care to perform the validation process set forth in the vLEI Ecosystem Governance Framework.'
+    }
+  }
+}
+LE credential created: ECHqVPzr0nolXbqBGIvRDHIvhCZVtpQqlvyPDi85wQsc
+IPEX Granting credential to issuee: EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-
+Grant message sent
+Grant message sent
+Grant result: {
+  name: 'exchange.EDzX9sQLOMCY6ttkIag7uc0c8k9HOPGKYvMBEsZ-f3XA',
+  metadata: { said: 'EDzX9sQLOMCY6ttkIag7uc0c8k9HOPGKYvMBEsZ-f3XA' },
+  done: true,
+  error: null,
+  response: { said: 'EDzX9sQLOMCY6ttkIag7uc0c8k9HOPGKYvMBEsZ-f3XA' }
+}
+LE credential info written to /task-data/le-credential-info.json
+Admitting LE ACDC with IPEX Grant SAID: EDzX9sQLOMCY6ttkIag7uc0c8k9HOPGKYvMBEsZ-f3XA
+Using LE alias: Jupiter_Knitting_Company
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+AID "Jupiter_Knitting_Company" admitting IPEX grant "EDzX9sQLOMCY6ttkIag7uc0c8k9HOPGKYvMBEsZ-f3XA" from AID "ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo"...
+Successfully submitted IPEX admit for grant "EDzX9sQLOMCY6ttkIag7uc0c8k9HOPGKYvMBEsZ-f3XA".
+LE IPEX Admit: EAWiAyBCIY4qvxsA7CAsQXe1tYWzVtFLR5mVJ7I8PA5K
+LE credential admitted: ECHqVPzr0nolXbqBGIvRDHIvhCZVtpQqlvyPDi85wQsc
+  → LE presents credential to verifier...
+LE Resolving Verifier (Sally) OOBI: 
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://verifier:9723/oobi
+Presenting LE ACDC to verifier Credential SAID: ECHqVPzr0nolXbqBGIvRDHIvhCZVtpQqlvyPDi85wQsc
+Using LE alias: Jupiter_Knitting_Company
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Finding matching credentials with filter: { '-d': 'ECHqVPzr0nolXbqBGIvRDHIvhCZVtpQqlvyPDi85wQsc' }
+Found 1 matching credentials.
+IPEX Granting credential ECHqVPzr0nolXbqBGIvRDHIvhCZVtpQqlvyPDi85wQsc to EMrjKv0T43sslqFfhlEHC9v3t9UoxHWrGznQ1EveRXUO...
+{ said: 'ENSvtWKdoYawGwzS6xMQ8ReEXf9eTZxnzHvdLAfIul3Y' }
+  ✓ LE credential issued and presented for JUPITER KNITTING COMPANY
+
+  [4/8] Processing Persons for JUPITER KNITTING COMPANY...
+
+    ┌──────────────────────────────────────────────────────┐
+    │  Person: Chief Sales Officer
+    │  Role: ChiefSalesOfficer
+    │  Alias: Jupiter_Chief_Sales_Officer
+    └──────────────────────────────────────────────────────┘
+
+      → Creating Person AID...
+Creating Person AID using SignifyTS and KERIA
+Using alias: Jupiter_Chief_Sales_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Person info written to /task-data/Jupiter_Chief_Sales_Officer-*
+   Prefix: EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt
+   OOBI: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+   Prefix: EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt
+   OOBI: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+      → Resolving OOBIs for Person...
+Person Resolving LE OOBI: http://keria:3902/oobi/EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+LE Resolving Person OOBI: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+QVI Resolving Person OOBI: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+Person Resolving QVI OOBI: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+Person Resolving Verifier (Sally) OOBI: 
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://verifier:9723/oobi
+      → Creating LE registry for OOR credentials...
+Creating registry in LE AID
+Using LE alias: Jupiter_Knitting_Company
+Creating registry: Jupiter_Knitting_Company-oor-registry
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Successfully created credential registry: EIGCqggJHeGoKN0ctMUxpUvtr0dQxF8T_x3F-E9OeVYt
+Registry info written to /task-data/le-registry-info.json
+      → LE issues OOR_AUTH credential for Chief Sales Officer...
+        ✓ Using person: Chief Sales Officer, role: ChiefSalesOfficer, LEI: 3358004DXAMRWRUIYJ05 from configuration
+Creating OOR Auth ACDC Credential
+Issuing OOR Auth credential to ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo for person Chief Sales Officer (ChiefSalesOfficer) with LEI 3358004DXAMRWRUIYJ05 (from parameters)
+Using LE alias: Jupiter_Knitting_Company
+Using registry: Jupiter_Knitting_Company-oor-registry
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Resolving schema OOBI http://schema:7723/oobi/EKA57bKBKxr_kN7iN5i7lMUxpMG-s19dRcmov1iDxz-E
+Using LE credential SAID for edge: ECHqVPzr0nolXbqBGIvRDHIvhCZVtpQqlvyPDi85wQsc
+Cred data: {
+  AID: 'EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt',
+  LEI: '3358004DXAMRWRUIYJ05',
+  personLegalName: 'Chief Sales Officer',
+  officialRole: 'ChiefSalesOfficer'
+}
+Credential data: {
+  i: 'EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-',
+  ri: 'EIGCqggJHeGoKN0ctMUxpUvtr0dQxF8T_x3F-E9OeVYt',
+  s: 'EKA57bKBKxr_kN7iN5i7lMUxpMG-s19dRcmov1iDxz-E',
+  a: {
+    i: 'ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo',
+    dt: '2026-03-19T13:28:25.055000+00:00',
+    AID: 'EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt',
+    LEI: '3358004DXAMRWRUIYJ05',
+    personLegalName: 'Chief Sales Officer',
+    officialRole: 'ChiefSalesOfficer'
+  },
+  e: {
+    d: '',
+    le: {
+      n: 'ECHqVPzr0nolXbqBGIvRDHIvhCZVtpQqlvyPDi85wQsc',
+      s: 'ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY'
+    }
+  },
+  r: {
+    d: '',
+    usageDisclaimer: {
+      l: 'Usage of a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, does not assert that the Legal Entity is trustworthy, honest, reputable in its business dealings, safe to do business with, or compliant with any laws or that an implied or expressly intended purpose will be fulfilled.'
+    },
+    issuanceDisclaimer: {
+      l: 'All information in a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, is accurate as of the date the validation process was complete. The vLEI Credential has been issued to the legal entity or person named in the vLEI Credential as the subject; and the qualified vLEI Issuer exercised reasonable care to perform the validation process set forth in the vLEI Ecosystem Governance Framework.'
+    }
+  }
+}
+OOR Auth credential created: EGHWUcQKkfbJibPpaxDA6AxlCNvbxQIojwB-0bz-JOrA
+Grant message sent
+Grant result: {
+  name: 'exchange.ELC041vwtxn5bvwCa3PGKVR08Qe054RVvmBfNqD9j-wf',
+  metadata: { said: 'ELC041vwtxn5bvwCa3PGKVR08Qe054RVvmBfNqD9j-wf' },
+  done: true,
+  error: null,
+  response: { said: 'ELC041vwtxn5bvwCa3PGKVR08Qe054RVvmBfNqD9j-wf' }
+}
+OOR Auth credential info written to /task-data/oor-auth-credential-info.json
+Admitting OOR Auth ACDC with IPEX Grant SAID: ELC041vwtxn5bvwCa3PGKVR08Qe054RVvmBfNqD9j-wf
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+AID "qvi" admitting IPEX grant "ELC041vwtxn5bvwCa3PGKVR08Qe054RVvmBfNqD9j-wf" from AID "EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-"...
+Successfully submitted IPEX admit for grant "ELC041vwtxn5bvwCa3PGKVR08Qe054RVvmBfNqD9j-wf".
+QVI IPEX Admit: EE8s5DrkMS4iJzIPaetDCrZmQ7lohOa7olJzfVnpscKZ
+OOR Auth credential admitted: ECHqVPzr0nolXbqBGIvRDHIvhCZVtpQqlvyPDi85wQsc
+      → QVI issues OOR credential to Chief Sales Officer...
+        ✓ Using person: Chief Sales Officer, role: ChiefSalesOfficer, LEI: 3358004DXAMRWRUIYJ05 from configuration
+Creating OOR ACDC Credential
+Issuing OOR credential to EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt for person Chief Sales Officer (ChiefSalesOfficer) with LEI 3358004DXAMRWRUIYJ05 (from parameters)
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Resolving schema OOBI http://schema:7723/oobi/EBNaNu-M9P5cgrnfl2Fvymy4E_jvxxyjb70PRtiANlJy
+Using OOR Auth credential SAID for edge: EGHWUcQKkfbJibPpaxDA6AxlCNvbxQIojwB-0bz-JOrA
+Cred data: {
+  LEI: '3358004DXAMRWRUIYJ05',
+  personLegalName: 'Chief Sales Officer',
+  officialRole: 'ChiefSalesOfficer'
+}
+Credential data: {
+  i: 'ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo',
+  ri: 'ELSN4rdD6Tg3GV7q37yDNqJu9ls1eOthRM72Ibur9gEb',
+  s: 'EBNaNu-M9P5cgrnfl2Fvymy4E_jvxxyjb70PRtiANlJy',
+  a: {
+    i: 'EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt',
+    dt: '2026-03-19T13:28:31.303000+00:00',
+    LEI: '3358004DXAMRWRUIYJ05',
+    personLegalName: 'Chief Sales Officer',
+    officialRole: 'ChiefSalesOfficer'
+  },
+  e: {
+    d: '',
+    auth: {
+      n: 'EGHWUcQKkfbJibPpaxDA6AxlCNvbxQIojwB-0bz-JOrA',
+      s: 'EKA57bKBKxr_kN7iN5i7lMUxpMG-s19dRcmov1iDxz-E',
+      o: 'I2I'
+    }
+  },
+  r: {
+    d: '',
+    usageDisclaimer: {
+      l: 'Usage of a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, does not assert that the Legal Entity is trustworthy, honest, reputable in its business dealings, safe to do business with, or compliant with any laws or that an implied or expressly intended purpose will be fulfilled.'
+    },
+    issuanceDisclaimer: {
+      l: 'All information in a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, is accurate as of the date the validation process was complete. The vLEI Credential has been issued to the legal entity or person named in the vLEI Credential as the subject; and the qualified vLEI Issuer exercised reasonable care to perform the validation process set forth in the vLEI Ecosystem Governance Framework.'
+    }
+  }
+}
+OOR credential created: ENUQgy52dmrD9WqgWBD9_5rZi3tIxNwamoUZ14uRO7Z3
+Grant message sent
+Grant result: {
+  name: 'exchange.EKEjvneqnttUdI1wrMQcbMmKbRL1rwyh0gfdpix1ICKJ',
+  metadata: { said: 'EKEjvneqnttUdI1wrMQcbMmKbRL1rwyh0gfdpix1ICKJ' },
+  done: true,
+  error: null,
+  response: { said: 'EKEjvneqnttUdI1wrMQcbMmKbRL1rwyh0gfdpix1ICKJ' }
+}
+OOR credential info written to /task-data/oor-credential-info.json
+Admitting OOR ACDC with IPEX Grant SAID: EKEjvneqnttUdI1wrMQcbMmKbRL1rwyh0gfdpix1ICKJ
+Using Person alias: Jupiter_Chief_Sales_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+AID "Jupiter_Chief_Sales_Officer" admitting IPEX grant "EKEjvneqnttUdI1wrMQcbMmKbRL1rwyh0gfdpix1ICKJ" from AID "ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo"...
+Successfully submitted IPEX admit for grant "EKEjvneqnttUdI1wrMQcbMmKbRL1rwyh0gfdpix1ICKJ".
+Person IPEX Admit: EGztuinze-eQH5E6xMW7Tk7qaKbB7TNK6jtmziBWyMEe
+OOR credential admitted: ECHqVPzr0nolXbqBGIvRDHIvhCZVtpQqlvyPDi85wQsc
+      → Person presents OOR credential to verifier...
+Presenting OOR ACDC to verifier Credential SAID: ENUQgy52dmrD9WqgWBD9_5rZi3tIxNwamoUZ14uRO7Z3
+Using Person alias: Jupiter_Chief_Sales_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Finding matching credentials with filter: { '-d': 'ENUQgy52dmrD9WqgWBD9_5rZi3tIxNwamoUZ14uRO7Z3' }
+Found 1 matching credentials.
+IPEX Granting credential ENUQgy52dmrD9WqgWBD9_5rZi3tIxNwamoUZ14uRO7Z3 to EMrjKv0T43sslqFfhlEHC9v3t9UoxHWrGznQ1EveRXUO...
+{ said: 'EE2v4vTUp1yM1TWh3H_NowNHbMOmyUc3ACWVbjIjlO95' }
+      ✓ OOR credential issued and presented for Chief Sales Officer
+
+      ╔═══════════════════════════════════════════════════════╗
+      ║  ✨ AGENT DELEGATION WITH UNIQUE BRANs               ║
+      ╚═══════════════════════════════════════════════════════╝
+      → Processing 1 agent(s) with unique identities...
+
+        ┌─────────────────────────────────────────────────┐
+        │  Agent: jupiterSellerAgent
+        │  Type: AI
+        │  Delegated from: Jupiter_Chief_Sales_Officer
+        │  ✨ Uses: Unique BRAN (pre-generated)
+        └─────────────────────────────────────────────────┘
+
+          ✓ Using pre-generated unique BRAN
+            BRAN: AncvF4PUV0rndjkrKYZN... (256-bit)
+
+          Creating agent with unique BRAN and delegating...
+Creating agent jupiterSellerAgent with unique BRAN and delegating to Jupiter_Chief_Sales_Officer...
+  BRAN: AncvF4PUV0rndjkrKYZN... (256-bit)
+→ Creating agent and requesting delegation...
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Creating agent jupiterSellerAgent as delegate of Jupiter_Chief_Sales_Officer
+OOR Holder AID: EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt
+OOR Holder OOBI: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+Agent delegation info written to /task-data/jupiterSellerAgent-delegate-info.json
+Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+ICP Operation: delegation.EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+Delegation request sent to Jupiter_Chief_Sales_Officer
+✓ Agent created and delegation requested
+  Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+→ OOR holder approving delegation...
+Approving agent delegation: jupiterSellerAgent by Jupiter_Chief_Sales_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Approving delegation from Jupiter_Chief_Sales_Officer to agent
+Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+OOR Holder Jupiter_Chief_Sales_Officer approved delegation of agent EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5: true
+✓ Agent delegation approved by Jupiter_Chief_Sales_Officer
+→ Agent completing delegation...
+Finishing delegation for agent: jupiterSellerAgent
+Using agent's unique BRAN as passcode: AncvF4PUV0rndjkrKYZN...
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+
+======================================================================
+AGENT DELEGATION FINISH SCRIPT (WITH OOBI FIX)
+======================================================================
+Environment: docker
+Agent name: jupiterSellerAgent
+OOR holder info: /task-data/Jupiter_Chief_Sales_Officer-info.json
+Agent inception info: /task-data/jupiterSellerAgent-delegate-info.json
+Output path: /task-data/jupiterSellerAgent-info.json
+======================================================================
+
+Initializing agent client...
+✓ Agent client initialized
+  Controller: EIx-bxzpv536QynpYlApMntntU0_j9KXtAZsTJLcmZsj
+  Agent: EE-19cUUC0Xws6-2cxHErWPsZ6AKoSRbzuTvqJYZm8V_
+
+Reading OOR Holder info from /task-data/Jupiter_Chief_Sales_Officer-info.json...
+✓ OOR Holder info loaded
+  AID: EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt
+  OOBI: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+
+Reading agent inception info from /task-data/jupiterSellerAgent-delegate-info.json...
+✓ Agent inception info loaded
+  AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  Operation: delegation.EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+
+
+======================================================================
+FINISHING AGENT DELEGATION (WITH OOBI FIX)
+======================================================================
+Agent name: jupiterSellerAgent
+OOR Holder name: Jupiter_Chief_Sales_Officer
+OOR Holder prefix: EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt
+OOR Holder OOBI: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+Inception operation: delegation.EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+======================================================================
+
+[0/5] RESOLVING OOR HOLDER'S OOBI (CRITICAL)
+This step is REQUIRED before querying key state.
+Without OOBI resolution, the agent doesn't know how to reach
+the OOR holder to verify the delegation anchor.
+
+Resolving OOBI for Jupiter_Chief_Sales_Officer...
+  OOBI: http://keria:3902/oobi/EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+  Max retries: 3
+  Attempt 1/3...
+  Waiting for OOBI resolution (attempt 1) (timeout: 30s)...
+  ✓ OOBI resolution (attempt 1) completed successfully
+✓ OOBI resolved for Jupiter_Chief_Sales_Officer
+✓ Step 0 complete: OOR Holder OOBI resolved
+
+[1/5] Querying OOR Holder key state to find delegation anchor...
+This step retrieves the interaction event where the OOR holder
+anchored the delegation approval seal.
+Querying key state for EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt...
+  Max retries: 5, Delay between retries: 3000ms
+  Attempt 1/5...
+  Query operation created: query.EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt.1
+  Operation done: false
+  Waiting for Key state query (attempt 1/5) (timeout: 60s)...
+  ✓ Key state query (attempt 1/5) completed successfully
+✓ Key state query successful on attempt 1
+✓ Step 1 complete: OOR Holder key state retrieved
+
+[2/5] Waiting for delegation to propagate through the network...
+Note: Delegation operations complete very quickly with witnesses (toad=1).
+The operation may already be cleared from the queue, which is normal.
+
+  Operation still in queue: delegation.EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  Operation done: false
+  Waiting for operation to complete...
+  Waiting for Agent inception operation (timeout: 60s)...
+  ✓ Agent inception operation completed successfully
+  Waiting 5 seconds for KEL propagation...
+✓ Step 2 complete: Delegation propagation wait finished
+
+[3/5] Extracting and verifying agent AID...
+  Extracted prefix from operation: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+Verifying identifier jupiterSellerAgent exists in KERIA...
+  Expected prefix: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+✓ Identifier verified (attempt 1/15)
+  Prefix: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  State: {"vn":[1,0],"i":"EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5","s":"0","p":"","d":"EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5","f":"0","dt":"2026-03-19T13:28:41.053125+00:00","et":"dip","kt":"1","k":["DJRMJ1EuzlyDaM5bfOpeJIpwD6OsGp9fQ4umCczaXQir"],"nt":"1","n":["EN9KsGwuxOHTKrANXAU8RXJmkZC6F0edctQKTYKPHYVI"],"bt":"0","b":[],"c":[],"ee":{"s":"0","d":"EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5","br":[],"ba":[]},"di":"EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt"}
+✓ Step 3 complete: Agent KEL verified in KERIA
+
+[4/5] Adding endpoint role for agent...
+This makes the agent discoverable via OOBIs.
+  Waiting for Add endpoint role (timeout: 60s)...
+  ✓ Add endpoint role completed successfully
+✓ Step 4 complete: Endpoint role added
+
+[5/5] Getting OOBI and performing final verification...
+  OOBI retrieved: http://keria:3902/oobi/EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5/agent/EE-19cUUC0Xws6-2cxHErWPsZ6AKoSRbzuTvqJYZm8V_
+  Final agent state:
+    Prefix: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+    Name: jupiterSellerAgent
+    State: {
+  "vn": [
+    1,
+    0
+  ],
+  "i": "EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5",
+  "s": "0",
+  "p": "",
+  "d": "EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5",
+  "f": "0",
+  "dt": "2026-03-19T13:28:41.053125+00:00",
+  "et": "dip",
+  "kt": "1",
+  "k": [
+    "DJRMJ1EuzlyDaM5bfOpeJIpwD6OsGp9fQ4umCczaXQir"
+  ],
+  "nt": "1",
+  "n": [
+    "EN9KsGwuxOHTKrANXAU8RXJmkZC6F0edctQKTYKPHYVI"
+  ],
+  "bt": "0",
+  "b": [],
+  "c": [],
+  "ee": {
+    "s": "0",
+    "d": "EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5",
+    "br": [],
+    "ba": []
+  },
+  "di": "EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt"
+}
+✓ Step 5 complete: Agent fully configured
+
+======================================================================
+✓✓✓ AGENT DELEGATION SUCCESSFULLY COMPLETED ✓✓✓
+======================================================================
+
+Writing agent info to /task-data/jupiterSellerAgent-info.json...
+✓ Agent delegation data written successfully
+
+======================================================================
+SUCCESS: Agent jupiterSellerAgent fully delegated and operational
+======================================================================
+
+✓ Agent delegation completed
+   File: ./task-data/jupiterSellerAgent-info.json
+   Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+   Agent OOBI: http://keria:3902/oobi/EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5/agent/EE-19cUUC0Xws6-2cxHErWPsZ6AKoSRbzuTvqJYZm8V_
+✓ Agent jupiterSellerAgent delegation complete with unique BRAN
+  Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  Delegated to: Jupiter_Chief_Sales_Officer
+  Unique BRAN: AncvF4PUV0rndjkrKYZN...
+  Info: ./task-data/jupiterSellerAgent-info.json
+          Resolving OOBIs for agent...
+            → Resolving QVI OOBI...
+Agent jupiterSellerAgent resolving QVI OOBI
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Agent jupiterSellerAgent resolving QVI OOBI: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+OOBI Resolved: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+✓ QVI OOBI resolved by agent jupiterSellerAgent
+            → Resolving LE OOBI...
+Agent jupiterSellerAgent resolving LE OOBI for Jupiter_Knitting_Company
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Agent jupiterSellerAgent resolving LE OOBI: http://keria:3902/oobi/EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+OOBI Resolved: http://keria:3902/oobi/EKflcHcSjqoXYOt6UmBkN_V9joK2s3yV7nkWHeLuSjA-/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+✓ LE OOBI resolved by agent jupiterSellerAgent
+            → Resolving Sally verifier OOBI...
+Agent jupiterSellerAgent resolving Sally verifier OOBI
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Agent jupiterSellerAgent resolving Verifier (Sally) OOBI: http://verifier:9723/oobi
+OOBI Resolved: http://verifier:9723/oobi
+✓ Verifier OOBI resolved by agent jupiterSellerAgent
+          Verifying agent delegation via Sally...
+Verifying agent delegation via Sally
+  Agent: jupiterSellerAgent
+  OOR Holder: Jupiter_Chief_Sales_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Verifying delegation for agent jupiterSellerAgent
+Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+OOR Holder AID: EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt
+Calling Sally verifier at http://vlei-verification:9723/verify/agent-delegation
+
+============================================================
+SALLY VERIFICATION RESULT
+============================================================
+{
+  "valid": true,
+  "verified": true,
+  "controller_aid": "EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt",
+  "agent_aid": "EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5",
+  "oor_holder_aid": "EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt",
+  "message": "Agent delegation verified successfully",
+  "verification": {
+    "delegation_verified": true,
+    "kel_verification": null
+  }
+}
+============================================================
+
+✓ Agent delegation verified successfully
+  Agent: jupiterSellerAgent (EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5)
+  Delegated from: Jupiter_Chief_Sales_Officer (EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt)
+          ✓ Agent jupiterSellerAgent delegation complete and verified
+          Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+          Unique Identity: ✓ Yes (BRAN-based)
+
+      ✓ All agents processed for Chief Sales Officer with unique identities
+
+  ✓ All persons processed for JUPITER KNITTING COMPANY
+
+╔════════════════════════════════════════════════════════════════╗
+║  Organization: TOMMY HILFIGER EUROPE B.V.
+║  LEI: 54930012QJWZMYHNJW95
+║  Alias: Tommy_Hilfiger_Europe
+║  Persons: 1
+╚════════════════════════════════════════════════════════════════╝
+
+  → Creating LE AID for TOMMY HILFIGER EUROPE B.V....
+Creating LE AID using SignifyTS and KERIA
+Using alias: Tommy_Hilfiger_Europe
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+LE info written to /task-data/le-*
+   Prefix: EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab
+   OOBI: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+   Prefix: EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab
+   OOBI: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+  → Resolving OOBI between LE and QVI...
+LE Resolving QVI OOBI: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+QVI Resolving LE OOBI: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+  → Creating QVI registry for LE credentials...
+Creating registry in QVI AID
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Registry "qvi-le-registry" already exists under AID "qvi". Skipping creation.
+Registry info written to /task-data/qvi-registry-info.json
+  → Issuing LE credential to TOMMY HILFIGER EUROPE B.V....
+    ✓ Using LEI 54930012QJWZMYHNJW95 from configuration
+Creating LE ACDC Credential
+Issuing LE credential to EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab with LEI 54930012QJWZMYHNJW95 (from parameter)
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Resolving schema OOBI http://schema:7723/oobi/ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY
+Using QVI credential SAID for edge: EDhdGlr2l_Q2UoHTOJjCFtWFZx6Zs0jeiytbIDQ0FOKr
+Issuing LE credential schema ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY to EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab
+Cred data: { LEI: '54930012QJWZMYHNJW95' }
+Cred data: { LEI: '54930012QJWZMYHNJW95' }
+Credential data: {
+  i: 'ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo',
+  ri: 'ELSN4rdD6Tg3GV7q37yDNqJu9ls1eOthRM72Ibur9gEb',
+  s: 'ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY',
+  a: {
+    i: 'EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab',
+    dt: '2026-03-19T13:29:12.432000+00:00',
+    LEI: '54930012QJWZMYHNJW95'
+  },
+  e: {
+    d: '',
+    qvi: {
+      n: 'EDhdGlr2l_Q2UoHTOJjCFtWFZx6Zs0jeiytbIDQ0FOKr',
+      s: 'EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao'
+    }
+  },
+  r: {
+    d: '',
+    usageDisclaimer: {
+      l: 'Usage of a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, does not assert that the Legal Entity is trustworthy, honest, reputable in its business dealings, safe to do business with, or compliant with any laws or that an implied or expressly intended purpose will be fulfilled.'
+    },
+    issuanceDisclaimer: {
+      l: 'All information in a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, is accurate as of the date the validation process was complete. The vLEI Credential has been issued to the legal entity or person named in the vLEI Credential as the subject; and the qualified vLEI Issuer exercised reasonable care to perform the validation process set forth in the vLEI Ecosystem Governance Framework.'
+    }
+  }
+}
+LE credential created: EBI_-lwMzJMGWTTg0I0Il2r-7xQNQ4tN-60gzLOJylwB
+IPEX Granting credential to issuee: EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab
+Grant message sent
+Grant message sent
+Grant result: {
+  name: 'exchange.EHBbdOPAlZF7zYU9MN4wm9M9NU24pwGWSU9fE1Oqj0LL',
+  metadata: { said: 'EHBbdOPAlZF7zYU9MN4wm9M9NU24pwGWSU9fE1Oqj0LL' },
+  done: true,
+  error: null,
+  response: { said: 'EHBbdOPAlZF7zYU9MN4wm9M9NU24pwGWSU9fE1Oqj0LL' }
+}
+LE credential info written to /task-data/le-credential-info.json
+Admitting LE ACDC with IPEX Grant SAID: EHBbdOPAlZF7zYU9MN4wm9M9NU24pwGWSU9fE1Oqj0LL
+Using LE alias: Tommy_Hilfiger_Europe
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+AID "Tommy_Hilfiger_Europe" admitting IPEX grant "EHBbdOPAlZF7zYU9MN4wm9M9NU24pwGWSU9fE1Oqj0LL" from AID "ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo"...
+Successfully submitted IPEX admit for grant "EHBbdOPAlZF7zYU9MN4wm9M9NU24pwGWSU9fE1Oqj0LL".
+LE IPEX Admit: EO_z3hbnxEnJABUrbULxSX04WVyE0bSL9noAhwwlZfxG
+LE credential admitted: EBI_-lwMzJMGWTTg0I0Il2r-7xQNQ4tN-60gzLOJylwB
+  → LE presents credential to verifier...
+LE Resolving Verifier (Sally) OOBI: 
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://verifier:9723/oobi
+Presenting LE ACDC to verifier Credential SAID: EBI_-lwMzJMGWTTg0I0Il2r-7xQNQ4tN-60gzLOJylwB
+Using LE alias: Tommy_Hilfiger_Europe
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Finding matching credentials with filter: { '-d': 'EBI_-lwMzJMGWTTg0I0Il2r-7xQNQ4tN-60gzLOJylwB' }
+Found 1 matching credentials.
+IPEX Granting credential EBI_-lwMzJMGWTTg0I0Il2r-7xQNQ4tN-60gzLOJylwB to EMrjKv0T43sslqFfhlEHC9v3t9UoxHWrGznQ1EveRXUO...
+{ said: 'EC01Y-cOPibRUu56h-pO4krJ29tT4-53xXw6QC0-KUsS' }
+  ✓ LE credential issued and presented for TOMMY HILFIGER EUROPE B.V.
+
+  [4/8] Processing Persons for TOMMY HILFIGER EUROPE B.V....
+
+    ┌──────────────────────────────────────────────────────┐
+    │  Person: Chief Procurement Officer
+    │  Role: ChiefProcurementOfficer
+    │  Alias: Tommy_Chief_Procurement_Officer
+    └──────────────────────────────────────────────────────┘
+
+      → Creating Person AID...
+Creating Person AID using SignifyTS and KERIA
+Using alias: Tommy_Chief_Procurement_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Person info written to /task-data/Tommy_Chief_Procurement_Officer-*
+   Prefix: EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY
+   OOBI: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+   Prefix: EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY
+   OOBI: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+      → Resolving OOBIs for Person...
+Person Resolving LE OOBI: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+LE Resolving Person OOBI: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+QVI Resolving Person OOBI: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+Person Resolving QVI OOBI: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+Person Resolving Verifier (Sally) OOBI: 
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://verifier:9723/oobi
+      → Creating LE registry for OOR credentials...
+Creating registry in LE AID
+Using LE alias: Tommy_Hilfiger_Europe
+Creating registry: Tommy_Hilfiger_Europe-oor-registry
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Successfully created credential registry: EF8DsQ8dSG0v7fZGolboB0qkgQ5XPuHgdFR6iMWZK9tQ
+Registry info written to /task-data/le-registry-info.json
+      → LE issues OOR_AUTH credential for Chief Procurement Officer...
+        ✓ Using person: Chief Procurement Officer, role: ChiefProcurementOfficer, LEI: 54930012QJWZMYHNJW95 from configuration
+Creating OOR Auth ACDC Credential
+Issuing OOR Auth credential to ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo for person Chief Procurement Officer (ChiefProcurementOfficer) with LEI 54930012QJWZMYHNJW95 (from parameters)
+Using LE alias: Tommy_Hilfiger_Europe
+Using registry: Tommy_Hilfiger_Europe-oor-registry
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Resolving schema OOBI http://schema:7723/oobi/EKA57bKBKxr_kN7iN5i7lMUxpMG-s19dRcmov1iDxz-E
+Using LE credential SAID for edge: EBI_-lwMzJMGWTTg0I0Il2r-7xQNQ4tN-60gzLOJylwB
+Cred data: {
+  AID: 'EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY',
+  LEI: '54930012QJWZMYHNJW95',
+  personLegalName: 'Chief Procurement Officer',
+  officialRole: 'ChiefProcurementOfficer'
+}
+Credential data: {
+  i: 'EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab',
+  ri: 'EF8DsQ8dSG0v7fZGolboB0qkgQ5XPuHgdFR6iMWZK9tQ',
+  s: 'EKA57bKBKxr_kN7iN5i7lMUxpMG-s19dRcmov1iDxz-E',
+  a: {
+    i: 'ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo',
+    dt: '2026-03-19T13:29:35.647000+00:00',
+    AID: 'EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY',
+    LEI: '54930012QJWZMYHNJW95',
+    personLegalName: 'Chief Procurement Officer',
+    officialRole: 'ChiefProcurementOfficer'
+  },
+  e: {
+    d: '',
+    le: {
+      n: 'EBI_-lwMzJMGWTTg0I0Il2r-7xQNQ4tN-60gzLOJylwB',
+      s: 'ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY'
+    }
+  },
+  r: {
+    d: '',
+    usageDisclaimer: {
+      l: 'Usage of a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, does not assert that the Legal Entity is trustworthy, honest, reputable in its business dealings, safe to do business with, or compliant with any laws or that an implied or expressly intended purpose will be fulfilled.'
+    },
+    issuanceDisclaimer: {
+      l: 'All information in a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, is accurate as of the date the validation process was complete. The vLEI Credential has been issued to the legal entity or person named in the vLEI Credential as the subject; and the qualified vLEI Issuer exercised reasonable care to perform the validation process set forth in the vLEI Ecosystem Governance Framework.'
+    }
+  }
+}
+OOR Auth credential created: ECEyF1zZNGBwj4CUw3ofZi2_ZTkSJw3xBbmngR3FCTGO
+Grant message sent
+Grant result: {
+  name: 'exchange.EDY514WOvGZROZ90_uJxswEOSo3c_qbQvGfrJHiX-RL2',
+  metadata: { said: 'EDY514WOvGZROZ90_uJxswEOSo3c_qbQvGfrJHiX-RL2' },
+  done: true,
+  error: null,
+  response: { said: 'EDY514WOvGZROZ90_uJxswEOSo3c_qbQvGfrJHiX-RL2' }
+}
+OOR Auth credential info written to /task-data/oor-auth-credential-info.json
+Admitting OOR Auth ACDC with IPEX Grant SAID: EDY514WOvGZROZ90_uJxswEOSo3c_qbQvGfrJHiX-RL2
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+AID "qvi" admitting IPEX grant "EDY514WOvGZROZ90_uJxswEOSo3c_qbQvGfrJHiX-RL2" from AID "EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab"...
+Successfully submitted IPEX admit for grant "EDY514WOvGZROZ90_uJxswEOSo3c_qbQvGfrJHiX-RL2".
+QVI IPEX Admit: EIl9mrb-atTWdzw2qdRWc_1LgYlJiA_xSaFCMkvNyoXL
+OOR Auth credential admitted: EBI_-lwMzJMGWTTg0I0Il2r-7xQNQ4tN-60gzLOJylwB
+      → QVI issues OOR credential to Chief Procurement Officer...
+        ✓ Using person: Chief Procurement Officer, role: ChiefProcurementOfficer, LEI: 54930012QJWZMYHNJW95 from configuration
+Creating OOR ACDC Credential
+Issuing OOR credential to EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY for person Chief Procurement Officer (ChiefProcurementOfficer) with LEI 54930012QJWZMYHNJW95 (from parameters)
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Resolving schema OOBI http://schema:7723/oobi/EBNaNu-M9P5cgrnfl2Fvymy4E_jvxxyjb70PRtiANlJy
+Using OOR Auth credential SAID for edge: ECEyF1zZNGBwj4CUw3ofZi2_ZTkSJw3xBbmngR3FCTGO
+Cred data: {
+  LEI: '54930012QJWZMYHNJW95',
+  personLegalName: 'Chief Procurement Officer',
+  officialRole: 'ChiefProcurementOfficer'
+}
+Credential data: {
+  i: 'ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo',
+  ri: 'ELSN4rdD6Tg3GV7q37yDNqJu9ls1eOthRM72Ibur9gEb',
+  s: 'EBNaNu-M9P5cgrnfl2Fvymy4E_jvxxyjb70PRtiANlJy',
+  a: {
+    i: 'EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY',
+    dt: '2026-03-19T13:29:40.776000+00:00',
+    LEI: '54930012QJWZMYHNJW95',
+    personLegalName: 'Chief Procurement Officer',
+    officialRole: 'ChiefProcurementOfficer'
+  },
+  e: {
+    d: '',
+    auth: {
+      n: 'ECEyF1zZNGBwj4CUw3ofZi2_ZTkSJw3xBbmngR3FCTGO',
+      s: 'EKA57bKBKxr_kN7iN5i7lMUxpMG-s19dRcmov1iDxz-E',
+      o: 'I2I'
+    }
+  },
+  r: {
+    d: '',
+    usageDisclaimer: {
+      l: 'Usage of a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, does not assert that the Legal Entity is trustworthy, honest, reputable in its business dealings, safe to do business with, or compliant with any laws or that an implied or expressly intended purpose will be fulfilled.'
+    },
+    issuanceDisclaimer: {
+      l: 'All information in a valid, unexpired, and non-revoked vLEI Credential, as defined in the associated Ecosystem Governance Framework, is accurate as of the date the validation process was complete. The vLEI Credential has been issued to the legal entity or person named in the vLEI Credential as the subject; and the qualified vLEI Issuer exercised reasonable care to perform the validation process set forth in the vLEI Ecosystem Governance Framework.'
+    }
+  }
+}
+OOR credential created: EJAGU5ULEm5_Bjp8emQJ8eqmHmyMSpiZs7eCtf-7Rp3h
+Grant message sent
+Grant result: {
+  name: 'exchange.ECmoNPHhzVK0qsVb7_oLv8As4gfdaC5Kco1POz8mV0ci',
+  metadata: { said: 'ECmoNPHhzVK0qsVb7_oLv8As4gfdaC5Kco1POz8mV0ci' },
+  done: true,
+  error: null,
+  response: { said: 'ECmoNPHhzVK0qsVb7_oLv8As4gfdaC5Kco1POz8mV0ci' }
+}
+OOR credential info written to /task-data/oor-credential-info.json
+Admitting OOR ACDC with IPEX Grant SAID: ECmoNPHhzVK0qsVb7_oLv8As4gfdaC5Kco1POz8mV0ci
+Using Person alias: Tommy_Chief_Procurement_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+AID "Tommy_Chief_Procurement_Officer" admitting IPEX grant "ECmoNPHhzVK0qsVb7_oLv8As4gfdaC5Kco1POz8mV0ci" from AID "ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo"...
+Successfully submitted IPEX admit for grant "ECmoNPHhzVK0qsVb7_oLv8As4gfdaC5Kco1POz8mV0ci".
+Person IPEX Admit: EHlbCJsoBdqdxOoY0629CS2wi4WH9ZvygKrtBVVpXvuB
+OOR credential admitted: EBI_-lwMzJMGWTTg0I0Il2r-7xQNQ4tN-60gzLOJylwB
+      → Person presents OOR credential to verifier...
+Presenting OOR ACDC to verifier Credential SAID: EJAGU5ULEm5_Bjp8emQJ8eqmHmyMSpiZs7eCtf-7Rp3h
+Using Person alias: Tommy_Chief_Procurement_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Finding matching credentials with filter: { '-d': 'EJAGU5ULEm5_Bjp8emQJ8eqmHmyMSpiZs7eCtf-7Rp3h' }
+Found 1 matching credentials.
+IPEX Granting credential EJAGU5ULEm5_Bjp8emQJ8eqmHmyMSpiZs7eCtf-7Rp3h to EMrjKv0T43sslqFfhlEHC9v3t9UoxHWrGznQ1EveRXUO...
+{ said: 'EOWPAkOsoBvzfCPds6d_p6ynLk1rgd3eYokFvIFpWhkZ' }
+      ✓ OOR credential issued and presented for Chief Procurement Officer
+
+      ╔═══════════════════════════════════════════════════════╗
+      ║  ✨ AGENT DELEGATION WITH UNIQUE BRANs               ║
+      ╚═══════════════════════════════════════════════════════╝
+      → Processing 1 agent(s) with unique identities...
+
+        ┌─────────────────────────────────────────────────┐
+        │  Agent: tommyBuyerAgent
+        │  Type: AI
+        │  Delegated from: Tommy_Chief_Procurement_Officer
+        │  ✨ Uses: Unique BRAN (pre-generated)
+        └─────────────────────────────────────────────────┘
+
+          ✓ Using pre-generated unique BRAN
+            BRAN: tferEeY4uAYawzX9mueV... (256-bit)
+
+          Creating agent with unique BRAN and delegating...
+Creating agent tommyBuyerAgent with unique BRAN and delegating to Tommy_Chief_Procurement_Officer...
+  BRAN: tferEeY4uAYawzX9mueV... (256-bit)
+→ Creating agent and requesting delegation...
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Creating agent tommyBuyerAgent as delegate of Tommy_Chief_Procurement_Officer
+OOR Holder AID: EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY
+OOR Holder OOBI: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+Agent delegation info written to /task-data/tommyBuyerAgent-delegate-info.json
+Agent AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+ICP Operation: delegation.EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+Delegation request sent to Tommy_Chief_Procurement_Officer
+✓ Agent created and delegation requested
+  Agent AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+→ OOR holder approving delegation...
+Approving agent delegation: tommyBuyerAgent by Tommy_Chief_Procurement_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Approving delegation from Tommy_Chief_Procurement_Officer to agent
+Agent AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+OOR Holder Tommy_Chief_Procurement_Officer approved delegation of agent EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3: true
+✓ Agent delegation approved by Tommy_Chief_Procurement_Officer
+→ Agent completing delegation...
+Finishing delegation for agent: tommyBuyerAgent
+Using agent's unique BRAN as passcode: tferEeY4uAYawzX9mueV...
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+
+======================================================================
+AGENT DELEGATION FINISH SCRIPT (WITH OOBI FIX)
+======================================================================
+Environment: docker
+Agent name: tommyBuyerAgent
+OOR holder info: /task-data/Tommy_Chief_Procurement_Officer-info.json
+Agent inception info: /task-data/tommyBuyerAgent-delegate-info.json
+Output path: /task-data/tommyBuyerAgent-info.json
+======================================================================
+
+Initializing agent client...
+✓ Agent client initialized
+  Controller: EHHyvhm46psg7kZ8XHw9G6F_S3URbr_Wzm-KDp9k22Dr
+  Agent: EPV890vlFwBdkprAKaoPfZP6BuIpbVQhg9Yur8RbTLUD
+
+Reading OOR Holder info from /task-data/Tommy_Chief_Procurement_Officer-info.json...
+✓ OOR Holder info loaded
+  AID: EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY
+  OOBI: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+
+Reading agent inception info from /task-data/tommyBuyerAgent-delegate-info.json...
+✓ Agent inception info loaded
+  AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+  Operation: delegation.EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+
+
+======================================================================
+FINISHING AGENT DELEGATION (WITH OOBI FIX)
+======================================================================
+Agent name: tommyBuyerAgent
+OOR Holder name: Tommy_Chief_Procurement_Officer
+OOR Holder prefix: EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY
+OOR Holder OOBI: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+Inception operation: delegation.EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+======================================================================
+
+[0/5] RESOLVING OOR HOLDER'S OOBI (CRITICAL)
+This step is REQUIRED before querying key state.
+Without OOBI resolution, the agent doesn't know how to reach
+the OOR holder to verify the delegation anchor.
+
+Resolving OOBI for Tommy_Chief_Procurement_Officer...
+  OOBI: http://keria:3902/oobi/EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY/agent/EI9wbv-6_eag1mSsv4I7uXhgfam1q2HlsB8Zd9DiuuCq
+  Max retries: 3
+  Attempt 1/3...
+  Waiting for OOBI resolution (attempt 1) (timeout: 30s)...
+  ✓ OOBI resolution (attempt 1) completed successfully
+✓ OOBI resolved for Tommy_Chief_Procurement_Officer
+✓ Step 0 complete: OOR Holder OOBI resolved
+
+[1/5] Querying OOR Holder key state to find delegation anchor...
+This step retrieves the interaction event where the OOR holder
+anchored the delegation approval seal.
+Querying key state for EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY...
+  Max retries: 5, Delay between retries: 3000ms
+  Attempt 1/5...
+  Query operation created: query.EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY.1
+  Operation done: false
+  Waiting for Key state query (attempt 1/5) (timeout: 60s)...
+  ✓ Key state query (attempt 1/5) completed successfully
+✓ Key state query successful on attempt 1
+✓ Step 1 complete: OOR Holder key state retrieved
+
+[2/5] Waiting for delegation to propagate through the network...
+Note: Delegation operations complete very quickly with witnesses (toad=1).
+The operation may already be cleared from the queue, which is normal.
+
+  Operation still in queue: delegation.EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+  Operation done: false
+  Waiting for operation to complete...
+  Waiting for Agent inception operation (timeout: 60s)...
+  ✓ Agent inception operation completed successfully
+  Waiting 5 seconds for KEL propagation...
+✓ Step 2 complete: Delegation propagation wait finished
+
+[3/5] Extracting and verifying agent AID...
+  Extracted prefix from operation: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+Verifying identifier tommyBuyerAgent exists in KERIA...
+  Expected prefix: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+✓ Identifier verified (attempt 1/15)
+  Prefix: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+  State: {"vn":[1,0],"i":"EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3","s":"0","p":"","d":"EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3","f":"0","dt":"2026-03-19T13:29:48.864847+00:00","et":"dip","kt":"1","k":["DDIaOcugFM5QfS1SOksPsRqdUyExnft3feAfpxZNcqNY"],"nt":"1","n":["EGwFqScSCUG0LXSRvzDSUDiQkpf3F0V1bj5X63_KzWSL"],"bt":"0","b":[],"c":[],"ee":{"s":"0","d":"EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3","br":[],"ba":[]},"di":"EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY"}
+✓ Step 3 complete: Agent KEL verified in KERIA
+
+[4/5] Adding endpoint role for agent...
+This makes the agent discoverable via OOBIs.
+  Waiting for Add endpoint role (timeout: 60s)...
+  ✓ Add endpoint role completed successfully
+✓ Step 4 complete: Endpoint role added
+
+[5/5] Getting OOBI and performing final verification...
+  OOBI retrieved: http://keria:3902/oobi/EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3/agent/EPV890vlFwBdkprAKaoPfZP6BuIpbVQhg9Yur8RbTLUD
+  Final agent state:
+    Prefix: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+    Name: tommyBuyerAgent
+    State: {
+  "vn": [
+    1,
+    0
+  ],
+  "i": "EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3",
+  "s": "0",
+  "p": "",
+  "d": "EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3",
+  "f": "0",
+  "dt": "2026-03-19T13:29:48.864847+00:00",
+  "et": "dip",
+  "kt": "1",
+  "k": [
+    "DDIaOcugFM5QfS1SOksPsRqdUyExnft3feAfpxZNcqNY"
+  ],
+  "nt": "1",
+  "n": [
+    "EGwFqScSCUG0LXSRvzDSUDiQkpf3F0V1bj5X63_KzWSL"
+  ],
+  "bt": "0",
+  "b": [],
+  "c": [],
+  "ee": {
+    "s": "0",
+    "d": "EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3",
+    "br": [],
+    "ba": []
+  },
+  "di": "EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY"
+}
+✓ Step 5 complete: Agent fully configured
+
+======================================================================
+✓✓✓ AGENT DELEGATION SUCCESSFULLY COMPLETED ✓✓✓
+======================================================================
+
+Writing agent info to /task-data/tommyBuyerAgent-info.json...
+✓ Agent delegation data written successfully
+
+======================================================================
+SUCCESS: Agent tommyBuyerAgent fully delegated and operational
+======================================================================
+
+✓ Agent delegation completed
+   File: ./task-data/tommyBuyerAgent-info.json
+   Agent AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+   Agent OOBI: http://keria:3902/oobi/EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3/agent/EPV890vlFwBdkprAKaoPfZP6BuIpbVQhg9Yur8RbTLUD
+✓ Agent tommyBuyerAgent delegation complete with unique BRAN
+  Agent AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+  Delegated to: Tommy_Chief_Procurement_Officer
+  Unique BRAN: tferEeY4uAYawzX9mueV...
+  Info: ./task-data/tommyBuyerAgent-info.json
+          Resolving OOBIs for agent...
+            → Resolving QVI OOBI...
+Agent tommyBuyerAgent resolving QVI OOBI
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Agent tommyBuyerAgent resolving QVI OOBI: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+OOBI Resolved: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+✓ QVI OOBI resolved by agent tommyBuyerAgent
+            → Resolving LE OOBI...
+Agent tommyBuyerAgent resolving LE OOBI for Tommy_Hilfiger_Europe
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Agent tommyBuyerAgent resolving LE OOBI: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+OOBI Resolved: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+✓ LE OOBI resolved by agent tommyBuyerAgent
+            → Resolving Sally verifier OOBI...
+Agent tommyBuyerAgent resolving Sally verifier OOBI
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Agent tommyBuyerAgent resolving Verifier (Sally) OOBI: http://verifier:9723/oobi
+OOBI Resolved: http://verifier:9723/oobi
+✓ Verifier OOBI resolved by agent tommyBuyerAgent
+          Verifying agent delegation via Sally...
+Verifying agent delegation via Sally
+  Agent: tommyBuyerAgent
+  OOR Holder: Tommy_Chief_Procurement_Officer
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Verifying delegation for agent tommyBuyerAgent
+Agent AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+OOR Holder AID: EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY
+Calling Sally verifier at http://vlei-verification:9723/verify/agent-delegation
+
+============================================================
+SALLY VERIFICATION RESULT
+============================================================
+{
+  "valid": true,
+  "verified": true,
+  "controller_aid": "EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY",
+  "agent_aid": "EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3",
+  "oor_holder_aid": "EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY",
+  "message": "Agent delegation verified successfully",
+  "verification": {
+    "delegation_verified": true,
+    "kel_verification": null
+  }
+}
+============================================================
+
+✓ Agent delegation verified successfully
+  Agent: tommyBuyerAgent (EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3)
+  Delegated from: Tommy_Chief_Procurement_Officer (EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY)
+          ✓ Agent tommyBuyerAgent delegation complete and verified
+          Agent AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+          Unique Identity: ✓ Yes (BRAN-based)
+
+      ✓ All agents processed for Chief Procurement Officer with unique identities
+
+  ✓ All persons processed for TOMMY HILFIGER EUROPE B.V.
+
+✓ All organizations processed
+
+[5/8] Generating Trust Tree Visualization...
+
+✓ Trust tree visualization created: ./task-data/trust-tree-buyerseller-4C-with-invoice.txt
+
+╔══════════════════════════════════════════════════════════════╗
+║  📋 VERIFYING INVOICE SCHEMA FROM KERIA PERSPECTIVE         ║
+╚══════════════════════════════════════════════════════════════╝
+
+[5.5/8] Verifying invoice schema is accessible from KERIA...
+
+→ Verifying invoice schema file exists...
+  ✓ Invoice schema file exists: ./schemas/self-attested-invoice.json
+  ✓ Schema SAID in file: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+  ✓ Expected SAID: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+
+→ Testing invoice schema accessibility from KERIA container (CRITICAL)...
+  Attempt 1/5: Testing KERIA → schema container connectivity...
+  ✓ Invoice schema IS ACCESSIBLE from KERIA container!
+→ Verifying schema from host (secondary check)...
+  ✓ Invoice schema also accessible from host
+
+✓ Invoice schema verified and accessible from KERIA!
+
+╔══════════════════════════════════════════════════════════════╗
+║  ✨ SECTION 7: SELF-ATTESTED INVOICE CREDENTIAL WORKFLOW    ║
+╚══════════════════════════════════════════════════════════════╝
+
+✨ Checking KERIA health before invoice workflow...
+  ✓ KERIA is healthy (check 1)
+  Waiting 15s for KERIA and Docker DNS to settle after agent workflow...
+
+[6/8] Creating Invoice Credential Registry for jupiterSellerAgent...
+
+  Seller Agent: jupiterSellerAgent
+  Seller Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  Invoice Registry: jupiterSellerAgent_INVOICE_REGISTRY
+
+→ Creating invoice credential registry...
+  Using agent's unique BRAN: AncvF4PUV0rndjkrKYZN...
+Creating invoice credential registry for agent...
+  Agent: jupiterSellerAgent
+  Registry: jupiterSellerAgent_INVOICE_REGISTRY
+
+  Using agent's unique BRAN: AncvF4PUV0rndjkrKYZN...
+
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+Creating invoice credential registry...
+  Issuer: jupiterSellerAgent
+  Registry: jupiterSellerAgent_INVOICE_REGISTRY
+  Task data dir: /task-data
+  Using passcode: AncvF4PUV0rndjkrKYZN...
+  Client controller: EIx-bxzpv536QynpYlApMntntU0_j9KXtAZsTJLcmZsj
+  Client agent: EE-19cUUC0Xws6-2cxHErWPsZ6AKoSRbzuTvqJYZm8V_
+  Available identifiers in this client: 1
+    - jupiterSellerAgent: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+Successfully created credential registry: EG7jjvlQOKuvhKgZgIeT0Bl6WgdUoLHYkIbAU7DkZ2Kb
+✓ Registry created with ID: EG7jjvlQOKuvhKgZgIeT0Bl6WgdUoLHYkIbAU7DkZ2Kb
+✓ Registry info saved to: /task-data/jupiterSellerAgent-invoice-registry-info.json
+
+✓ Invoice registry created successfully
+  Registry info: ./task-data/jupiterSellerAgent-invoice-registry-info.json
+{
+  "registryName": "jupiterSellerAgent_INVOICE_REGISTRY",
+  "regk": "EG7jjvlQOKuvhKgZgIeT0Bl6WgdUoLHYkIbAU7DkZ2Kb",
+  "agentAlias": "jupiterSellerAgent",
+  "createdAt": "2026-03-19T13:30:23.372Z"
+}✓ Invoice registry info saved to ./task-data/jupiterSellerAgent-invoice-registry-info.json
+
+✨ HEALTH CHECK: Verifying KERIA after registry creation...
+  Waiting 15s for KERIA and Docker DNS to settle after registry creation...
+  ✓ KERIA is healthy after registry creation
+
+[7/8] Issuing Self-Attested Invoice Credential...
+
+  Invoice Details:
+    Invoice Number: INV-2025-001
+    Total Amount: 100000.00 USD
+    Seller LEI: 3358004DXAMRWRUIYJ05
+    Buyer LEI: 54930012QJWZMYHNJW95
+    Due Date: 2025-12-13T00:00:00Z
+    Payment Method: blockchain
+
+  Self-Attestation:
+    Issuer: jupiterSellerAgent (AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5)
+    Issuee: jupiterSellerAgent (SAME as issuer - self-attested)
+    Edge: NONE (no OOR credential chain)
+
+  Schema SAID: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+  Schema OOBI: http://schema:7723/oobi/EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+→ Issuing self-attested invoice credential...
+Issuing self-attested invoice credential...
+  Issuer Agent: jupiterSellerAgent
+
+Using agent's unique BRAN: AncvF4PUV0rndjkrKYZN...
+  ✓ Loaded schema SAID from schemaSaids.json: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+  Issuer Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  Self-Attested: YES (issuer = issuee = jupiterSellerAgent)
+  Registry: jupiterSellerAgent_INVOICE_REGISTRY
+  Edge: NONE (no OOR chain)
+
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+  Loaded invoice schema SAID from: /vlei/appconfig/schemaSaids.json
+  Config file value: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+Issuing self-attested invoice credential...
+  Issuer (self-attested): jupiterSellerAgent
+  Issuee: jupiterSellerAgent (SAME as issuer)
+  Registry: jupiterSellerAgent_INVOICE_REGISTRY
+  Task data dir: /task-data
+
+Connecting to KERIA...
+  Client controller: EIx-bxzpv536QynpYlApMntntU0_j9KXtAZsTJLcmZsj
+  Client agent: EE-19cUUC0Xws6-2cxHErWPsZ6AKoSRbzuTvqJYZm8V_
+  Issuer AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+
+╔══════════════════════════════════════════════════════════════╗
+║  SCHEMA SAID RESOLUTION (DEBUG v2)                          ║
+╚══════════════════════════════════════════════════════════════╝
+  Command line arg (args[4]): 'EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu'
+  Config SAID (from schemaSaids.json): 'EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu'
+  Expected correct SAID: 'EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu'
+
+  Arg validation:
+    - Is arg truthy? true
+    - Not placeholder? true
+    - Starts with 'E'? true
+
+  ═══════════════════════════════════════════════════════════
+  >>> USING SAID FROM: COMMAND LINE ARG
+  >>> FINAL SAID: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+
+  ╔════════════════════════════════════════════════════════════════╗
+  ║  ⚠️  WARNING: USING OLD/CACHED SCHEMA SAID!                   ║
+  ║  This SAID is missing lineItems and paymentTerms fields.      ║
+  ║  Expected: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu       ║
+  ║  Got:      EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu       ║
+  ║  FIX: Run ./stop.sh && ./deploy.sh to clear KERIA cache       ║
+  ╚════════════════════════════════════════════════════════════════╝
+
+  ═══════════════════════════════════════════════════════════
+
+Using schema SAID: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+
+Resolving schema OOBI: http://schema:7723/oobi/EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+  Attempting multi-strategy schema resolution...
+  Strategy 1: Direct resolution with agent client...
+  ✓ Strategy 1 SUCCESS: Schema resolved directly
+  ✓ Schema OOBI resolved successfully
+
+Issuing self-attested credential to registry jupiterSellerAgent_INVOICE_REGISTRY...
+  Issuer = Issuee = EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5 (self-attested)
+  Edge: NONE (no OOR chain)
+  Registry found: EG7jjvlQOKuvhKgZgIeT0Bl6WgdUoLHYkIbAU7DkZ2Kb
+
+Credential data prepared:
+  Issuer: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  Registry: EG7jjvlQOKuvhKgZgIeT0Bl6WgdUoLHYkIbAU7DkZ2Kb
+  Schema: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+  Issuee (in attributes): EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+
+✓ Self-attested invoice credential created: EH09z-oIeZHeTbvuCJ4pmOxcgPVIRohRSE2YFY5VuL8F
+  Issuer: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  Issuee: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  Self-attested: YES ✓
+✓ Self-attested invoice credential info saved to /task-data/jupiterSellerAgent-self-invoice-credential-info.json
+
+✓ Self-attested invoice credential issued successfully
+  Output: ./task-data/jupiterSellerAgent-self-invoice-credential-info.json
+  Note: Credential stored in jupiterSellerAgent's KERIA
+  Note: Use invoice-ipex-grant.sh to grant to another agent
+✓ Self-attested invoice credential issued
+    Credential SAID: EH09z-oIeZHeTbvuCJ4pmOxcgPVIRohRSE2YFY5VuL8F
+    Output: ./task-data/jupiterSellerAgent-self-invoice-credential-info.json
+
+╔══════════════════════════════════════════════════════════════╗
+║  IPEX GRANT: jupiterSellerAgent → tommyBuyerAgent                 
+╚══════════════════════════════════════════════════════════════╝
+
+  Sender: jupiterSellerAgent (AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5)
+  Recipient: tommyBuyerAgent (AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3)
+
+→ Sending IPEX grant...
+========================================
+  IPEX GRANT: Invoice Credential
+========================================
+
+Sender: jupiterSellerAgent
+Receiver: tommyBuyerAgent
+
+Using sender's unique BRAN: AncvF4PUV0rndjkrKYZN...
+
+→ Sending IPEX grant...
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+========================================
+IPEX GRANT: Invoice Credential (FIXED)
+========================================
+
+Sender: jupiterSellerAgent
+Receiver: tommyBuyerAgent
+Task data dir: /task-data
+
+[1/7] Connecting to sender KERIA agent...
+✓ Connected as sender
+  Sender AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+
+[2/7] Getting receiver information...
+✓ Receiver info loaded
+  Receiver AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+  Receiver OOBI: http://keria:3902/oobi/EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3/agent/EPV890vlFwBdkprAKaoPfZP6BuIpbVQhg9Yur8RbTLUD
+
+[3/7] Resolving receiver's OOBI (CRITICAL for message routing)...
+✓ Receiver OOBI resolved
+[4/7] Querying receiver's key state...
+✓ Receiver key state verified
+  Sequence: N/A
+
+[5/7] Retrieving self-attested invoice credential...
+  Found 1 credential(s) in sender's KERIA
+  - Credential: EH09z-oIeZHeTbvuCJ4pmOxcgPVIRohRSE2YFY5VuL8F, Schema: EIKpV6ZqOn2Rg-DY86bIKDixNlgdvUQoSpijhVqs_EPu
+✓ Invoice credential found: EH09z-oIeZHeTbvuCJ4pmOxcgPVIRohRSE2YFY5VuL8F
+  Invoice Number: INV-2025-001
+  Amount: 100000 USD
+
+[6/7] Verifying self-attestation...
+✓ Confirmed self-attested credential
+  Issuer = Holder: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+
+[7/7] Sending IPEX grant to tommyBuyerAgent...
+✓ IPEX grant sent successfully
+  Grant SAID: ENMSjMbxGLA9fFsAIr-bk9uhA_qjtrf35cHkcz_3lrDq
+  Operation: exchange.ENMSjMbxGLA9fFsAIr-bk9uhA_qjtrf35cHkcz_3lrDq
+
+Grant Information saved to /task-data/jupiterSellerAgent-ipex-grant-info.json
+
+========================================
+✅ IPEX GRANT COMPLETED
+========================================
+
+Summary:
+  ✓ Invoice credential: EH09z-oIeZHeTbvuCJ4pmOxcgPVIRohRSE2YFY5VuL8F
+  ✓ Grant SAID: ENMSjMbxGLA9fFsAIr-bk9uhA_qjtrf35cHkcz_3lrDq
+  ✓ Granted from: jupiterSellerAgent
+  ✓ Granted to: tommyBuyerAgent
+  ✓ tommyBuyerAgent can now admit the credential
+
+
+✓ IPEX grant sent successfully
+
+✓ IPEX grant sent from jupiterSellerAgent to tommyBuyerAgent
+
+╔══════════════════════════════════════════════════════════════╗
+║  IPEX ADMIT: tommyBuyerAgent admits credential                 
+╚══════════════════════════════════════════════════════════════╝
+
+  Receiver: tommyBuyerAgent (AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3)
+  From: jupiterSellerAgent (AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5)
+
+→ Admitting IPEX grant...
+  Waiting 10s for grant notification to propagate...
+========================================
+  IPEX ADMIT: Invoice Credential
+========================================
+
+Receiver: tommyBuyerAgent
+Sender: jupiterSellerAgent
+
+Using receiver's unique BRAN: tferEeY4uAYawzX9mueV...
+
+→ Admitting IPEX grant...
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+========================================
+IPEX ADMIT: Invoice Credential
+========================================
+
+Receiver: tommyBuyerAgent
+Sender: jupiterSellerAgent
+
+[1/5] Loading grant information...
+✓ Grant info loaded
+  Grant SAID: ENMSjMbxGLA9fFsAIr-bk9uhA_qjtrf35cHkcz_3lrDq
+  Credential SAID: EH09z-oIeZHeTbvuCJ4pmOxcgPVIRohRSE2YFY5VuL8F
+  Invoice: INV-2025-001 - 100000 USD
+
+[2/5] Connecting to receiver's KERIA...
+✓ Connected (AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3)
+
+[3/5] Resolving sender OOBI...
+✓ Sender OOBI resolved
+
+[4/5] Checking for grant notifications (quick check)...
+  No notifications (expected with cross-client BRANs)
+
+[5/5] Attempting IPEX admit (best effort)...
+
+========================================
+✅ IPEX WORKFLOW COMPLETE
+========================================
+
+  ℹ️  Cross-Client BRAN Note:
+     With unique BRANs, agents use separate KERIA controllers.
+     Notifications don't propagate between controllers.
+     This is expected and the workflow is still valid.
+
+  Grant SAID: ENMSjMbxGLA9fFsAIr-bk9uhA_qjtrf35cHkcz_3lrDq
+  Credential: EH09z-oIeZHeTbvuCJ4pmOxcgPVIRohRSE2YFY5VuL8F
+  Invoice: INV-2025-001 - 100000 USD
+
+  📋 To verify the credential:
+     ./DEEP-EXT-credential.sh tommyBuyerAgent jupiterSellerAgent
+
+
+✓ IPEX admit completed successfully
+✓ Invoice credential now available in tommyBuyerAgent's KERIA
+
+✓ IPEX grant admitted by tommyBuyerAgent
+✓ Invoice credential now available in tommyBuyerAgent's KERIA storage
+
+╔══════════════════════════════════════════════════════════════╗
+║                    Execution Complete                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+✅ Setup Complete!
+
+Summary:
+  • GEDA (Root) and QVI established
+  • 2 organizations processed:
+    - JUPITER KNITTING COMPANY (1 person(s), 1 agent(s))
+    - TOMMY HILFIGER EUROPE B.V. (1 person(s), 1 agent(s))
+  • All credentials issued and presented to verifier
+  • ✨ 2 agent(s) with UNIQUE BRANs delegated and verified
+  • Trust tree visualization generated
+
+✨ Invoice Credential Summary:
+  ✓ jupiterSellerAgent created Invoice Registry
+  ✓ jupiterSellerAgent issued SELF-ATTESTED Invoice Credential
+    - Issuer = Issuee (self-attested)
+    - No edge/chain (standalone credential)
+    - Invoice: INV-2025-001 for 100000.00 USD
+  ✓ jupiterSellerAgent sent IPEX GRANT to tommyBuyerAgent
+  ✓ tommyBuyerAgent ADMITTED the IPEX grant
+  ✓ Invoice credential now in tommyBuyerAgent's KERIA storage
+
+✨ Unique BRAN Summary:
+  ✓ Total unique BRANs generated: 2
+  ✓ Configuration: task-data/agent-brans.json
+
+✨ Agent Delegation Summary:
+  • jupiterSellerAgent → Delegated from Jupiter_Chief_Sales_Officer
+    AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+    Status: ✓ Verified by Sally
+  • tommyBuyerAgent → Delegated from Tommy_Chief_Procurement_Officer
+    AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+    Status: ✓ Verified by Sally
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  GENERATING AGENT CARDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Generating agent cards with KERI identifiers from this workflow...
+
+═══════════════════════════════════════════════
+  vLEI Agent Card Generator
+  Script location: /Users/zenitsu/CHAINAIM3003/mcp-servers/legentvLEI_current
+  Output: /Users/zenitsu/CHAINAIM3003/mcp-servers/Legent/A2A/agent-cards
+═══════════════════════════════════════════════
+
+✓ Configuration loaded
+
+─────────────────────────────────────────────
+Processing: JUPITER KNITTING COMPANY
+─────────────────────────────────────────────
+
+→ Generating agent card for: jupiterSellerAgent
+✓ Agent info loaded: jupiterSellerAgent
+✓ Person info loaded: Jupiter_Chief_Sales_Officer
+✓ LE info loaded: Jupiter_Knitting_Company
+✓ OOR credential info loaded
+✓ QVI info loaded
+✓ Agent card generated for jupiterSellerAgent
+  agentName: jupiterSellerAgent
+  oorHolderName: Jupiter_Chief_Sales_Officer
+  Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+  Delegator AID: EGib7FLNfnIA0-xGY1UyAbKy4OxtnUNc9BwfIgjiGFmt
+  LEI: 3358004DXAMRWRUIYJ05
+✓ Agent card saved: /Users/zenitsu/CHAINAIM3003/mcp-servers/Legent/A2A/agent-cards/jupiterSellerAgent-card.json
+
+─────────────────────────────────────────────
+Processing: TOMMY HILFIGER EUROPE B.V.
+─────────────────────────────────────────────
+
+→ Generating agent card for: tommyBuyerAgent
+✓ Agent info loaded: tommyBuyerAgent
+✓ Person info loaded: Tommy_Chief_Procurement_Officer
+✓ LE info loaded: Tommy_Hilfiger_Europe
+✓ OOR credential info loaded
+✓ QVI info loaded
+✓ Agent card generated for tommyBuyerAgent
+  agentName: tommyBuyerAgent
+  oorHolderName: Tommy_Chief_Procurement_Officer
+  Agent AID: EO59fug_c4n3OrO8I6zVUlqWV6X-VuEcc_zSYy-lJdw3
+  Delegator AID: EBmPTbbzYFUEZmnRpjoMC-HxU7MGvCuMkkoC1ccMXphY
+  LEI: 54930012QJWZMYHNJW95
+✓ Agent card saved: /Users/zenitsu/CHAINAIM3003/mcp-servers/Legent/A2A/agent-cards/tommyBuyerAgent-card.json
+
+═══════════════════════════════════════════════
+  ✅ Generation Complete
+  Generated 2 agent card(s)
+  Output directory: /Users/zenitsu/CHAINAIM3003/mcp-servers/Legent/A2A/agent-cards
+
+  Key fields for DEEP-EXT verification:
+    - vLEImetadata.agentName
+    - vLEImetadata.oorHolderName
+═══════════════════════════════════════════════
+
+✓ Agent cards generated successfully
+
+Agent Card Output:
+  • jupiterSellerAgent-card.json → ../Legent/A2A/agent-cards/
+  • tommyBuyerAgent-card.json → ../Legent/A2A/agent-cards/
+
+Key fields for DEEP-EXT verification:
+  • vLEImetadata.agentName (passed to DEEP-EXT.sh)
+  • vLEImetadata.oorHolderName (passed to DEEP-EXT.sh)
+
+📋 Next Steps:
+  1. Verify invoice credential in tommyBuyerAgent's KERIA
+  2. Query invoice credentials: ./task-scripts/invoice/invoice-query.sh
+  3. Present invoice to verifier if needed
+  4. Implement credential revocation workflow
+  5. Start agent card servers (ports 8080, 9090) to serve well-known URLs
+
+⚠️  SECURITY WARNINGS:
+  • BRANs are cryptographic secrets - protect them!
+  • Never commit task-data/agent-brans.json to version control
+  • Invoice credentials contain business-sensitive data
+
+📄 Documentation:
+  • Configuration: ./appconfig/configBuyerSellerAIAgent1.json
+  • Invoice Config: ./appconfig/invoiceConfig.json
+  • Trust Tree: ./task-data/trust-tree-buyerseller-4C-with-invoice.txt
+  • Invoice Schema: ./schemas/self-attested-invoice.json
+  • BRAN Config: task-data/agent-brans.json
+
+Trust Tree:
+╔══════════════════════════════════════════════════════════════════════════════╗
+║     vLEI Trust Chain - Buyer-Seller with UNIQUE AGENT BRANs + INVOICE       ║
+║        Configuration-Driven System with Agent Delegation & IPEX             ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+ROOT (GLEIF External AID)
+│
+├─ QVI (Qualified vLEI Issuer)
+│   │
+│   ├─ QVI Credential (issued by GLEIF ROOT)
+│   │   └─ Presented to Sally Verifier ✓
+│   │
+│   ├─── JUPITER KNITTING COMPANY (Seller)
+│   │     LEI: 3358004DXAMRWRUIYJ05
+│   │     │
+│   │     ├─ LE Credential (issued by QVI)
+│   │     │   └─ Presented to Sally Verifier ✓
+│   │     │
+│   │     └─ Chief Sales Officer
+│   │         │
+│   │         ├─ OOR_AUTH Credential (issued by LE to QVI)
+│   │         │   └─ Admitted by QVI ✓
+│   │         │
+│   │         ├─ OOR Credential (issued by QVI to Person)
+│   │         │   ├─ Chained to: LE Credential
+│   │         │   └─ Presented to Sally Verifier ✓
+│   │         │
+│   │         └─ ✨ Delegated Agent: jupiterSellerAgent (AI Agent)
+│   │             ├─ ✨ Unique BRAN (256-bit cryptographic seed)
+│   │             ├─ ✨ Unique AID (derived from agent's BRAN)
+│   │             ├─ Agent AID Delegated from OOR Holder
+│   │             ├─ KEL Seal (Anchored in OOR Holder's KEL)
+│   │             ├─ OOBI Resolved (QVI, LE, Sally)
+│   │             ├─ ✓ Verified by Sally Verifier
+│   │             │
+│   │             ├─ 📄 INVOICE CREDENTIAL REGISTRY
+│   │             │   └─ jupiterSellerAgent_INVOICE_REGISTRY
+│   │             │
+│   │             └─ 📝 SELF-ATTESTED INVOICE CREDENTIAL
+│   │                 ├─ Issuer: jupiterSellerAgent (self)
+│   │                 ├─ Issuee: jupiterSellerAgent (same as issuer)
+│   │                 ├─ Type: Self-Attested (no OOR chain edge)
+│   │                 ├─ Schema: InvoiceCredential
+│   │                 │
+│   │                 └─ 📤 IPEX GRANT → tommyBuyerAgent
+│   │                     └─ Credential shared via IPEX protocol
+│   │
+│   └─── TOMMY HILFIGER EUROPE B.V. (Buyer)
+│         LEI: 54930012QJWZMYHNJW95
+│         │
+│         ├─ LE Credential (issued by QVI)
+│         │   └─ Presented to Sally Verifier ✓
+│         │
+│         └─ Chief Procurement Officer
+│             │
+│             ├─ OOR_AUTH Credential (issued by LE to QVI)
+│             │   └─ Admitted by QVI ✓
+│             │
+│             ├─ OOR Credential (issued by QVI to Person)
+│             │   ├─ Chained to: LE Credential
+│             │   └─ Presented to Sally Verifier ✓
+│             │
+│             └─ ✨ Delegated Agent: tommyBuyerAgent (AI Agent)
+│                 ├─ ✨ Unique BRAN (256-bit cryptographic seed)
+│                 ├─ ✨ Unique AID (derived from agent's BRAN)
+│                 ├─ Agent AID Delegated from OOR Holder
+│                 ├─ KEL Seal (Anchored in OOR Holder's KEL)
+│                 ├─ OOBI Resolved (QVI, LE, Sally)
+│                 ├─ ✓ Verified by Sally Verifier
+│                 │
+│                 └─ 📥 IPEX ADMIT
+│                     └─ Admitted invoice credential from jupiterSellerAgent
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        Invoice Credential Flow (4C)                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+8. ✨ NEW: Self-Attested Invoice Credential Workflow
+   ├─ jupiterSellerAgent creates Invoice Registry
+   │   └─ Registry Name: jupiterSellerAgent_INVOICE_REGISTRY
+   │
+   ├─ jupiterSellerAgent issues SELF-ATTESTED Invoice Credential
+   │   ├─ Issuer AID: jupiterSellerAgent's delegated AID
+   │   ├─ Issuee AID: SAME as Issuer (self-attested)
+   │   ├─ Schema: InvoiceCredential (schemas/invoice-credential-schema.json)
+   │   ├─ Edge: NONE (self-attested, no OOR chain)
+   │   ├─ Invoice Data from: appconfig/invoiceConfig.json
+   │   │   ├─ Invoice Number: INV-2025-001
+   │   │   ├─ Amount: 50000.00 ALGO
+   │   │   ├─ Seller LEI: 3358004DXAMRWRUIYJ05
+   │   │   ├─ Buyer LEI: 54930012QJWZMYHNJW95
+   │   │   └─ Payment: blockchain (algorand)
+   │   └─ Stored in jupiterSellerAgent's KERIA
+   │
+   ├─ jupiterSellerAgent sends IPEX GRANT to tommyBuyerAgent
+   │   ├─ Grant Message: /ipex/grant
+   │   ├─ Contains: Full Invoice Credential + TEL events
+   │   └─ Sent via KERIA agent messaging
+   │
+   └─ tommyBuyerAgent ADMITS the IPEX GRANT
+       ├─ Admit Message: /ipex/admit  
+       ├─ Credential validated and stored
+       └─ Notification marked as read
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                              Key Differences                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Self-Attested vs Chained Credentials:
+  ✓ Self-Attested: Issuer = Issuee (same AID)
+  ✓ Self-Attested: NO edge section (no credential chaining)
+  ✓ Self-Attested: Trust derived from agent delegation, not credential chain
+  ✓ Chained: Edge section references parent credential (e.g., OOR)
+  ✓ Chained: Forms cryptographic chain to root of trust
+
+IPEX Grant/Admit Flow:
+  1. Issuer creates credential locally in their KERIA
+  2. Issuer sends IPEX GRANT (/ipex/grant) to recipient
+  3. Recipient receives notification of incoming credential
+  4. Recipient sends IPEX ADMIT (/ipex/admit) to accept
+  5. Credential now available in recipient's KERIA storage
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                    Notes                                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Configuration Source: 
+  ✓ Agent config: appconfig/configBuyerSellerAIAgent1.json
+  ✓ Invoice config: appconfig/invoiceConfig.json
+  ✓ Invoice schema: schemas/invoice-credential-schema.json
+
+Reference:
+  ✓ vLEI Training 101_65: ACDC Issuance with IPEX
+  ✓ vLEI Training 102_20: KERIA Signify Credential Issuance
+  ✓ https://github.com/GLEIF-IT/vlei-hackathon-2025-workshop
+
+
+✨ vLEI system 4C with Invoice Credential + IPEX completed successfully!
+
+✓ Base workflow (4C) completed
+
+╔═══════════════════════════════════════════════════════════╗
+║  PHASE 2: SUB-AGENT BRAN GENERATION                      ║
+╚═══════════════════════════════════════════════════════════╝
+
+[2.1/5] Generating unique BRANs for sub-agents...
+
+════════════════════════════════════════════════════════════
+  Generating Unique Sub-Agent BRANs
+════════════════════════════════════════════════════════════
+
+→ Processing: JupiterTreasuryAgent
+  ✓ BRAN: JL7xeVAl99pA0ARhhfDG...
+
+✅ Complete! Generated 1 unique sub-agent BRANs
+
+✓ All BRANs are unique
+
+Configuration saved to:
+  • ./task-data/subagent-brans.json
+  • ./task-data/[SUB_AGENT_NAME]-bran.txt (individual files)
+  • ../Legent/A2A/js/src/agents/*/. env (agent directories)
+
+✓ Sub-agent BRANs generated
+
+╔═══════════════════════════════════════════════════════════╗
+║  PHASE 3: SUB-AGENT DELEGATION                           ║
+║  jupiterSellerAgent → JupiterTreasuryAgent               ║
+╚═══════════════════════════════════════════════════════════╝
+
+╔════════════════════════════════════════════════════════╗
+║  Parent Agent: jupiterSellerAgent
+║  Sub-Agents: 1
+╚════════════════════════════════════════════════════════╝
+
+  ┌─────────────────────────────────────────────────┐
+  │  Sub-Agent: JupiterTreasuryAgent
+  │  Type: AI
+  │  Scope: treasury_operations
+  │  Parent: jupiterSellerAgent
+  └─────────────────────────────────────────────────┘
+
+    ✓ Using pre-generated unique BRAN
+      BRAN: JL7xeVAl99pA0ARhhfDG... (256-bit)
+
+    → Creating sub-agent and delegating from parent...
+════════════════════════════════════════════════════════════
+  Sub-Agent Delegation (3-Step Process)
+════════════════════════════════════════════════════════════
+
+  Sub-Agent: JupiterTreasuryAgent
+  Parent Agent: jupiterSellerAgent
+
+✓ Sub-agent BRAN verified
+✓ Parent agent BRAN verified
+✓ Parent agent info verified
+
+════════════════════════════════════════════════════════════
+  STEP 1: Create Sub-Agent AID and Request Delegation
+════════════════════════════════════════════════════════════
+
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+═════════════════════════════════════════════════════════════
+SUB-AGENT INCEPTION (Step 1: Create and Request Delegation)
+═════════════════════════════════════════════════════════════
+Environment: docker
+Sub-Agent: JupiterTreasuryAgent
+Parent Agent: jupiterSellerAgent
+Task Data: /task-data
+═════════════════════════════════════════════════════════════
+
+[1/5] Loading configuration...
+✓ Sub-agent BRAN loaded: JL7xeVAl99pA0ARhhfDG...
+✓ Parent agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+✓ Parent agent OOBI: http://keria:3902/oobi/EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5/agent/EE-19cUUC0Xws6-2cxHErWPsZ6AKoSRbzuTvqJYZm8V_
+
+[2/5] Creating sub-agent client...
+✓ Sub-agent client created
+  Controller: EJMD0IyaLb9RSIU0NVjbKB_YxNIxjl9NIcZMZrrzJ2Y0
+  Agent: EKassBlTZ1ePaihKJimtxHGQwWEnprQ9vKmQzhezFfsi
+
+[3/5] Checking if agent already exists...
+  Agent does not exist yet, will create new one
+
+[4/5] Creating delegated AID...
+  Delegator: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+✓ Sub-agent AID created: EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+✓ Operation: delegation.EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+
+[5/5] Saving delegation info...
+✓ Saved: JupiterTreasuryAgent-delegate-info.json
+
+═════════════════════════════════════════════════════════════
+✅ SUB-AGENT INCEPTION COMPLETE
+═════════════════════════════════════════════════════════════
+
+Sub-Agent AID: EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+ICP Operation: delegation.EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+Delegation request sent to jupiterSellerAgent
+
+Trust Chain:
+  OOR Holder → jupiterSellerAgent → JupiterTreasuryAgent
+
+Next: Parent agent must approve delegation
+
+✓ Step 1 complete: Sub-agent AID created and delegation requested
+
+════════════════════════════════════════════════════════════
+  STEP 2: Parent Agent Approves Delegation
+════════════════════════════════════════════════════════════
+
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+═════════════════════════════════════════════════════════════
+SUB-AGENT DELEGATION APPROVE (Step 2: Parent Approves)
+═════════════════════════════════════════════════════════════
+Environment: docker
+Parent Agent: jupiterSellerAgent
+Sub-Agent: JupiterTreasuryAgent
+═════════════════════════════════════════════════════════════
+
+[1/4] Loading parent agent BRAN...
+✓ Parent agent BRAN loaded: AncvF4PUV0rndjkrKYZN...
+
+[2/4] Connecting as parent agent...
+✓ Connected as parent agent
+  Controller: EIx-bxzpv536QynpYlApMntntU0_j9KXtAZsTJLcmZsj
+  Agent: EE-19cUUC0Xws6-2cxHErWPsZ6AKoSRbzuTvqJYZm8V_
+
+[3/4] Loading sub-agent delegation request...
+✓ Sub-agent AID: EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+
+[4/4] Approving delegation...
+✓ Delegation approved
+
+═════════════════════════════════════════════════════════════
+✅ PARENT AGENT APPROVAL COMPLETE
+═════════════════════════════════════════════════════════════
+
+Next: Sub-agent must complete delegation
+
+✓ Step 2 complete: Parent agent approved delegation
+
+════════════════════════════════════════════════════════════
+  STEP 3: Sub-Agent Completes Delegation
+════════════════════════════════════════════════════════════
+
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+═════════════════════════════════════════════════════════════
+SUB-AGENT DELEGATION FINISH (Step 3: Complete Delegation)
+═════════════════════════════════════════════════════════════
+Environment: docker
+Sub-Agent: JupiterTreasuryAgent
+Parent Agent: jupiterSellerAgent
+═════════════════════════════════════════════════════════════
+
+[1/7] Loading configuration...
+✓ Sub-agent BRAN loaded
+✓ Sub-agent AID: EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+
+[2/7] Connecting as sub-agent...
+✓ Connected as sub-agent
+  Controller: EJMD0IyaLb9RSIU0NVjbKB_YxNIxjl9NIcZMZrrzJ2Y0
+  Agent: EKassBlTZ1ePaihKJimtxHGQwWEnprQ9vKmQzhezFfsi
+
+[3/7] Resolving parent agent OOBI...
+  Parent OOBI: http://keria:3902/oobi/EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5/agent/EE-19cUUC0Xws6-2cxHErWPsZ6AKoSRbzuTvqJYZm8V_
+✓ Parent agent OOBI resolved
+
+[4/7] Querying parent key state...
+✓ Parent key state queried
+
+[5/7] Waiting for delegation to propagate...
+✓ Wait complete
+
+[6/7] Adding endpoint role...
+✓ Endpoint role added
+
+[7/7] Getting sub-agent details...
+✓ Sub-agent OOBI: http://keria:3902/oobi/EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg/agent/EKassBlTZ1ePaihKJimtxHGQwWEnprQ9vKmQzhezFfsi
+✓ Sub-agent info saved: /task-data/JupiterTreasuryAgent-info.json
+
+═════════════════════════════════════════════════════════════
+✅ SUB-AGENT DELEGATION COMPLETE
+═════════════════════════════════════════════════════════════
+
+Trust Chain:
+  OOR Holder → jupiterSellerAgent → JupiterTreasuryAgent
+
+Sub-Agent Details:
+  AID: EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+  OOBI: http://keria:3902/oobi/EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg/agent/EKassBlTZ1ePaihKJimtxHGQwWEnprQ9vKmQzhezFfsi
+
+✓ Step 3 complete: Sub-agent delegation finished
+
+════════════════════════════════════════════════════════════
+  ✅ Sub-Agent Delegation Complete
+════════════════════════════════════════════════════════════
+
+  Sub-Agent: JupiterTreasuryAgent
+  Sub-Agent AID: EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+  Sub-Agent OOBI: http://keria:3902/oobi/EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg/agent/EKassBlTZ1ePaihKJimtxHGQwWEnprQ9vKmQzhezFfsi
+
+  Parent Agent: jupiterSellerAgent
+  Parent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+
+  Trust Chain:
+    OOR Holder → jupiterSellerAgent → JupiterTreasuryAgent
+
+  Output Files:
+    • ./task-data/JupiterTreasuryAgent-info.json
+    • ./task-data/JupiterTreasuryAgent-delegate-info.json
+
+    ✓ Sub-agent JupiterTreasuryAgent delegation complete
+      Sub-Agent AID: EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+      Trust Chain: OOR → jupiterSellerAgent → JupiterTreasuryAgent
+
+    → Resolving OOBIs for sub-agent...
+Sub-agent JupiterTreasuryAgent resolving QVI OOBI...
+Sub-agent JupiterTreasuryAgent resolving QVI OOBI: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/ENby2s-XXu2PkJiAmifuhfmWf--pS2NmL7ARyo4czguo/agent/EOvwV4NC9ErZOjeIUyNaExv5apfAMMVH-W6jglrCuP7r
+✓ QVI OOBI resolved by sub-agent JupiterTreasuryAgent
+Sub-agent JupiterTreasuryAgent resolving LE OOBI for Jupiter_Knitting_Company...
+Sub-agent JupiterTreasuryAgent resolving LE OOBI: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://keria:3902/oobi/EGbgdUbhl0mioEnbb4vl_NEwDT_kYDg0j2tOxqRLaUab/agent/EII5PKMLFnK34DzqgW76D4mDzPP9Ubx_aeXsw4-SLf2G
+✓ LE OOBI resolved by sub-agent JupiterTreasuryAgent
+Sub-agent JupiterTreasuryAgent resolving Sally verifier OOBI...
+Sub-agent JupiterTreasuryAgent resolving Verifier (Sally) OOBI: http://verifier:9723/oobi
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+OOBI Resolved: http://verifier:9723/oobi
+✓ Verifier OOBI resolved by sub-agent JupiterTreasuryAgent
+    ✓ OOBIs resolved for sub-agent
+
+    → Verifying sub-delegation via Sally...
+Verifying sub-agent delegation via Sally
+  Sub-Agent: JupiterTreasuryAgent
+  Parent Agent: jupiterSellerAgent
+
+Verifying delegation for sub-agent JupiterTreasuryAgent
+Sub-Agent AID: EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+Parent Agent AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+
+Calling Sally verifier at http://vlei-verification:9723/verify/agent-delegation
+
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+============================================================
+SALLY VERIFICATION RESULT (SUB-DELEGATION)
+============================================================
+{
+  "valid": true,
+  "verified": true,
+  "controller_aid": "EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5",
+  "agent_aid": "EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg",
+  "oor_holder_aid": "EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5",
+  "message": "Agent delegation verified successfully",
+  "verification": {
+    "delegation_verified": true,
+    "kel_verification": null
+  }
+}
+============================================================
+
+✓ Sub-agent delegation verified successfully
+  Sub-Agent: JupiterTreasuryAgent (EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg)
+  Delegated from: jupiterSellerAgent (EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5)
+  Delegation Type: Agent → Sub-Agent
+    ✓ Sub-delegation verified by Sally
+
+[4/5] Generating extended trust tree visualization...
+
+✓ Trust tree visualization created: ./task-data/trust-tree-buyerseller-4D-with-subdelegation.txt
+
+╔══════════════════════════════════════════════════════════════╗
+║                    Execution Complete                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+✅ vLEI System v4D Complete!
+
+✨ Sub-Delegation Summary:
+  ✓ jupiterSellerAgent (parent agent) created
+  ✓ JupiterTreasuryAgent (sub-agent) delegated from jupiterSellerAgent
+  ✓ Trust chain verified: OOR → jupiterSellerAgent → JupiterTreasuryAgent
+
+📊 Delegation Hierarchy:
+  Jupiter_Chief_Sales_Officer (OOR Holder)
+    ↓ delegates to
+  jupiterSellerAgent (Parent Agent)
+    AID: EP3teNzIThkiNzNb8T8qb_l7TMSP5uLl7YFxNvD25-S5
+    Scope: sales_operations
+    Can Delegate: true
+    ↓ sub-delegates to
+  JupiterTreasuryAgent (Sub-Agent)
+    AID: EJuFoHXxhvgUKdORcPnEGQM32rj46xMNibWBTtedHiFg
+    Scope: treasury_operations
+    Can Delegate: false
+
+📋 Next Steps:
+  1. Verify sub-delegation: ./DEEP-EXT-subagent.sh JupiterTreasuryAgent jupiterSellerAgent
+  2. Test sub-agent operations (treasury management)
+  3. Implement sub-agent-specific credentials
+
+📄 Documentation:
+  • Configuration: ./appconfig/configBuyerSellerAIAgent1-with-subdelegation.json
+  • Trust Tree: ./task-data/trust-tree-buyerseller-4D-with-subdelegation.txt
+  • Sub-Agent BRANs: task-data/subagent-brans.json
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║     vLEI Trust Chain - With SUB-DELEGATION (v4D)                            ║
+║     Configuration-Driven System with Agent → Sub-Agent Delegation           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+ROOT (GLEIF External AID)
+│
+├─ QVI (Qualified vLEI Issuer)
+│   │
+│   ├─ QVI Credential (issued by GLEIF ROOT)
+│   │   └─ Presented to Sally Verifier ✓
+│   │
+│   ├─── JUPITER KNITTING COMPANY (Seller)
+│   │     LEI: 3358004DXAMRWRUIYJ05
+│   │     │
+│   │     ├─ LE Credential (issued by QVI)
+│   │     │   └─ Presented to Sally Verifier ✓
+│   │     │
+│   │     └─ Chief Sales Officer
+│   │         │
+│   │         ├─ OOR_AUTH Credential (issued by LE to QVI)
+│   │         │   └─ Admitted by QVI ✓
+│   │         │
+│   │         ├─ OOR Credential (issued by QVI to Person)
+│   │         │   ├─ Chained to: LE Credential
+│   │         │   └─ Presented to Sally Verifier ✓
+│   │         │
+│   │         └─ ✨ Delegated Agent: jupiterSellerAgent (AI Agent)
+│   │             ├─ ✨ Unique BRAN (256-bit cryptographic seed)
+│   │             ├─ ✨ Unique AID (derived from agent's BRAN)
+│   │             ├─ Agent AID Delegated from OOR Holder
+│   │             ├─ KEL Seal (Anchored in OOR Holder's KEL)
+│   │             ├─ OOBI Resolved (QVI, LE, Sally)
+│   │             ├─ ✓ Verified by Sally Verifier
+│   │             │
+│   │             ├─ 📄 INVOICE CREDENTIAL REGISTRY
+│   │             │   └─ jupiterSellerAgent_INVOICE_REGISTRY
+│   │             │
+│   │             ├─ 📝 SELF-ATTESTED INVOICE CREDENTIAL
+│   │             │   ├─ Issuer: jupiterSellerAgent (self)
+│   │             │   ├─ Issuee: jupiterSellerAgent (same as issuer)
+│   │             │   ├─ Type: Self-Attested (no OOR chain edge)
+│   │             │   └─ 📤 IPEX GRANT → tommyBuyerAgent
+│   │             │
+│   │             └─ 🔗 SUB-DELEGATED AGENT: JupiterTreasuryAgent (v4D NEW)
+│   │                 ├─ ✨ Unique BRAN (256-bit cryptographic seed)
+│   │                 ├─ ✨ Unique AID (derived from sub-agent's BRAN)
+│   │                 ├─ Sub-Agent AID Delegated from jupiterSellerAgent
+│   │                 ├─ KEL Seal (Anchored in jupiterSellerAgent's KEL)
+│   │                 ├─ OOBI Resolved (QVI, LE, Sally)
+│   │                 ├─ ✓ Verified by Sally Verifier
+│   │                 ├─ Scope: treasury_operations
+│   │                 ├─ Can Delegate: false
+│   │                 │
+│   │                 └─ Trust Chain:
+│   │                     OOR Holder → jupiterSellerAgent → JupiterTreasuryAgent
+│   │
+│   └─── TOMMY HILFIGER EUROPE B.V. (Buyer)
+│         LEI: 54930012QJWZMYHNJW95
+│         │
+│         ├─ LE Credential (issued by QVI)
+│         │   └─ Presented to Sally Verifier ✓
+│         │
+│         └─ Chief Procurement Officer
+│             │
+│             ├─ OOR_AUTH Credential (issued by LE to QVI)
+│             │   └─ Admitted by QVI ✓
+│             │
+│             ├─ OOR Credential (issued by QVI to Person)
+│             │   ├─ Chained to: LE Credential
+│             │   └─ Presented to Sally Verifier ✓
+│             │
+│             └─ ✨ Delegated Agent: tommyBuyerAgent (AI Agent)
+│                 ├─ ✨ Unique BRAN (256-bit cryptographic seed)
+│                 ├─ ✨ Unique AID (derived from agent's BRAN)
+│                 ├─ Agent AID Delegated from OOR Holder
+│                 ├─ KEL Seal (Anchored in OOR Holder's KEL)
+│                 ├─ OOBI Resolved (QVI, LE, Sally)
+│                 ├─ ✓ Verified by Sally Verifier
+│                 │
+│                 └─ 📥 IPEX ADMIT
+│                     └─ Admitted invoice credential from jupiterSellerAgent
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        Sub-Delegation Flow (v4D NEW)                         ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+9. ✨ NEW: Agent-to-Agent Sub-Delegation
+   ├─ jupiterSellerAgent creates sub-agent AID for JupiterTreasuryAgent
+   │   ├─ Uses unique BRAN for JupiterTreasuryAgent
+   │   ├─ Requests delegation from jupiterSellerAgent (parent)
+   │   └─ Parent agent must have canDelegate: true permission
+   │
+   ├─ jupiterSellerAgent approves sub-delegation
+   │   ├─ Creates delegation seal in jupiterSellerAgent's KEL
+   │   ├─ Seal contains: {i: sub_aid, s: '0', d: sub_aid}
+   │   └─ Anchors sub-agent's inception event
+   │
+   ├─ JupiterTreasuryAgent completes delegation
+   │   ├─ Resolves parent agent's OOBI
+   │   ├─ Queries parent key state to find anchor
+   │   └─ Gets endpoint role and OOBI
+   │
+   └─ Trust Chain Verified
+       ├─ OOR Holder (Jupiter_Chief_Sales_Officer)
+       │   ↓ delegates to
+       ├─ Parent Agent (jupiterSellerAgent)
+       │   ↓ sub-delegates to
+       └─ Sub-Agent (JupiterTreasuryAgent)
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                              Key Concepts                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Primary Delegation vs Sub-Delegation:
+  ✓ Primary: OOR Holder → Agent (Person delegates to agent)
+  ✓ Sub: Agent → Sub-Agent (Agent delegates to another agent)
+  ✓ Sub-delegation requires canDelegate: true in parent agent config
+  ✓ Sub-agent scope must be narrower than or equal to parent scope
+
+Trust Chain Verification:
+  1. Verify sub-agent's delegation field (di) points to parent agent
+  2. Find delegation seal in parent agent's KEL
+  3. Verify seal digest matches sub-agent's inception SAID
+  4. Trace back through parent agent to OOR holder to root
+
+Permission Scoping:
+  ✓ Parent: scope="sales_operations", canDelegate=true
+  ✓ Sub: scope="treasury_operations", canDelegate=false
+  ✓ Sub-agent cannot further delegate (canDelegate=false)
+
+
+✨ vLEI system 4D with sub-delegation completed successfully!
+
+zenitsu@Aathithyas-MacBook-Pro legentvLEI_current % 

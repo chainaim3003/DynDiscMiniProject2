@@ -1,0 +1,283 @@
+1st terminal : SELLER TERMINAL 
+
+🏪  Seller Agent  →  http://localhost:8080
+    Margin Price : ₹350/unit  (protected)
+    Target Price : ₹385/unit
+    Target Profit: 10%
+    Max Rounds   : 3
+    DD Safety    : 50%  |  Payment Terms: Net 30
+
+
+  ╔══════════════════════════════════════════════════════════╗
+  ║  🏪  SELLER AGENT                                         ║
+  ║  Negotiation : NEG-1774545871230                         ║
+  ║  Started     : 10:54:31 pm                               ║
+  ╚══════════════════════════════════════════════════════════╝
+
+  ──────────────────────────────────────────────────────────
+  ROUND 1 / 3
+  ──────────────────────────────────────────────────────────
+
+    ▶  INITIAL OFFER  ── received from buyer                  
+      ₹360 / unit
+
+    ↑  COUNTER-OFFER  ── sent                                 
+      ₹380 / unit
+      was ₹360  ▲ +₹20 (+5.6%)
+      gap left : ₹20
+      reason   : Starting high to anchor expectations while showing willingness to negotiate by not starting at the target price, aiming to create a favorable tone for subsequent rounds
+
+    ↓  COUNTER-OFFER  ── received                             
+      ₹370 / unit
+      was ₹380  ▼ ₹10 (-2.6%)
+      reason   : Moving up from ₹360 to ₹370 shows willingness to converge while staying below the maximum budget, increasing pressure on the seller to consider a mutually beneficial price
+
+  ──────────────────────────────────────────────────────────
+  ROUND 2 / 3
+  ──────────────────────────────────────────────────────────
+
+    ↑  COUNTER-OFFER  ── sent                                 
+      ₹375 / unit
+      was ₹380  ▼ ₹5 (-1.3%)
+      gap left : ₹5
+      reason   : This counter offer moves toward the buyer's offer, showing flexibility while staying above the margin price and aiming to maximize profit.   
+
+    ✓  ACCEPTED  ── received                                  
+      ₹375 / unit
+      reason   : Buyer accepted our offer
+  ⋯ Bilateral acceptance confirmed at ₹375
+ResultManager: Received status update for unknown task 1d4fac8d-a2af-4a42-a6bb-b3a46fe3897f
+ResultManager: Received status update for unknown task 5debabc5-160b-44c7-a519-f4c7e35038ff
+
+  ┌─ Price Trail ───────────────────────────────────────────────┐
+  │  Rnd     Buyer         Seller        Gap         │
+  │  ────────────────────────────────────────────────│
+  │  1       ₹370          ₹380          ₹10         │
+  │  2       ₹375          ₹375          ₹0          │
+  └──────────────────────────────────────────────────┘
+
+    ✅  DEAL CLOSED                                            
+  Rounds: 2 / 3
+    Final Price  →  ₹375 / unit
+    Quantity     →  2,000 units
+    Total Value  →  ₹7,50,000
+  Buyer   : ₹370 → ₹375  (conceded ₹5, 1.4%)
+  Seller  : ₹380 → ₹375  (conceded ₹5, 1.3%)
+  Seller profit: ₹25 / unit
+  ══════════════════════════════════════════════════════════
+ResultManager: Received status update for unknown task 9896c139-da72-446e-b87c-fe3362a164b0
+
+    📝  PURCHASE ORDER                                         
+  ──────────────────────────────────────────────────────────
+  PO ID    : PO-1774545884359
+    Price    →  ₹375 / unit  ×  2000 units
+    Total    →  ₹7,50,000
+  Delivery : 2026-05-25
+  ──────────────────────────────────────────────────────────
+
+    📄  INVOICE GENERATED                                      
+  ──────────────────────────────────────────────────────────
+  Invoice  : INV-1774545884455
+  PO Ref   : PO-1774545884359
+    Price    →  ₹375 / unit  ×  2000
+  Subtotal : ₹7,50,000
+  GST 18%  : ₹1,35,000
+    TOTAL    →  ₹8,85,000
+  Payment  : Net 30 days
+  Delivery : 2026-05-25
+  ──────────────────────────────────────────────────────────
+
+    💰  DD OFFER SENT                                          
+  ──────────────────────────────────────────────────────────
+  Invoice      : INV-1774545884455
+  Original     : ₹8,85,000
+    Max DD Rate  →  3.333% (linear)
+    Proposed pay : 2026-04-05  (20 days early)
+    If accepted  →  ₹8,65,333.53  (save ₹19,666.47 @ 2.222%)
+  ──────────────────────────────────────────────────────────
+ResultManager: Received status update for unknown task 3688ffb6-caf0-4c40-b90f-81c2658e5323
+
+    ✓  DD ACCEPTED BY BUYER                                    
+  ──────────────────────────────────────────────────────────
+  Invoice    : INV-1774545884455
+    Settlement : 2026-04-10
+  Computing discounted amount and submitting to ACTUS...
+  ──────────────────────────────────────────────────────────
+  ⋯ Submitting DD contract to ACTUS for INV-1774545884455...
+  ⋯ ACTUS simulation SUCCESS — contractId: INV-1774545884455  scenarioId: dd_scenario_4545871230
+
+    📄  DD INVOICE — FINAL                                     
+  ──────────────────────────────────────────────────────────
+  Invoice ID   : INV-1774545884455
+  Original     : ₹8,85,000
+    Applied Rate →  1.667%
+    PAYABLE      →  ₹8,70,250.15  (saved ₹14,749.85)
+    Settle by   →  2026-04-10
+  ACTUS ID     : INV-1774545884455
+    ACTUS Status →  SUCCESS
+  ──────────────────────────────────────────────────────────
+ResultManager: Received status update for unknown task 49377b94-9568-440a-8544-98d91c2fae0f
+
+
+2nd terminal: BUYER TERMINAL
+
+
+🛒  Buyer Agent  →  http://localhost:9090
+    Max Budget  : ₹400/unit
+    Target Price: ₹330/unit
+    Quantity    : 2000 units
+    Max Rounds  : 3
+    DD Decision : manual (buyer types dd accept / dd accept YYYY-MM-DD / dd reject)
+
+
+  ╔══════════════════════════════════════════════════════════╗
+  ║  🛒  BUYER AGENT                                          ║
+  ║  Negotiation : NEG-1774545871230                         ║
+  ║  Started     : 10:54:31 pm                               ║
+  ╚══════════════════════════════════════════════════════════╝
+  ⋯ Using user-specified price: ₹360
+
+  ──────────────────────────────────────────────────────────
+  ROUND 1 / 3
+  ──────────────────────────────────────────────────────────
+
+    ▶  INITIAL OFFER  ── sent to seller                       
+      ₹360 / unit
+      reason   : Opening at ₹360, leaving negotiation room
+
+    ↓  COUNTER-OFFER  ── received                             
+      ₹380 / unit
+      was ₹360  ▲ +₹20 (+5.6%)
+      reason   : Starting high to anchor expectations while showing willingness to negotiate by not starting at the target price, aiming to create a favorable tone for subsequent rounds
+
+  ──────────────────────────────────────────────────────────
+  ROUND 2 / 3
+  ──────────────────────────────────────────────────────────
+
+    ↑  COUNTER-OFFER  ── sent                                 
+      ₹370 / unit
+      was ₹360  ▲ +₹10 (+2.8%)
+      gap left : ₹10
+      reason   : Moving up from ₹360 to ₹370 shows willingness to converge while staying below the maximum budget, increasing pressure on the seller to consider a mutually beneficial price
+
+    ↓  COUNTER-OFFER  ── received                             
+      ₹375 / unit
+      was ₹380  ▼ ₹5 (-1.3%)
+      reason   : This counter offer moves toward the buyer's offer, showing flexibility while staying above the margin price and aiming to maximize profit.   
+
+  ──────────────────────────────────────────────────────────
+  ROUND 3 / 3  ◀  FINAL ROUND
+  ──────────────────────────────────────────────────────────
+
+    ✓  ACCEPTED  ── sent to counterpart                       
+      ₹375 / unit
+      reason   : Accepting seller's offer based on strategic analysis
+  ⋯ Bilateral acceptance received — deal already closed at ₹375
+ResultManager: Received status update for unknown task e64a4cc4-0142-44f2-9b30-8947d2358b15
+ResultManager: Received status update for unknown task 87de589c-f308-4400-93e3-8f10c1ab7c24
+
+    📝  PURCHASE ORDER                                         
+  ──────────────────────────────────────────────────────────
+  PO ID    : PO-1774545884359
+    Price    →  ₹375 / unit  ×  2000 units
+    Total    →  ₹7,50,000
+  Delivery : 2026-05-25
+  ──────────────────────────────────────────────────────────
+
+  ┌─ Price Trail ───────────────────────────────────────────────┐
+  │  Rnd     Buyer         Seller        Gap         │
+  │  ────────────────────────────────────────────────│
+  │  1       ₹360          ₹380          ₹20         │
+  │  2       ₹370          ₹375          ₹5          │
+  │  3       ₹375          —             —           │
+  └──────────────────────────────────────────────────┘
+
+    ✅  DEAL CLOSED                                            
+  Rounds: 3 / 3
+    Final Price  →  ₹375 / unit
+    Quantity     →  2,000 units
+    Total Value  →  ₹7,50,000
+  Buyer   : ₹360 → ₹375  (conceded ₹15, 4.2%)
+  Seller  : ₹380 → ₹375  (conceded ₹5, 1.3%)
+  ══════════════════════════════════════════════════════════
+ResultManager: Received status update for unknown task e068770a-7813-4977-8eb8-f4a3a830f793
+
+    💰  DD OFFER RECEIVED — AWAITING YOUR DECISION
+    ─────────────────────────────────────────────────────────
+    Invoice      : INV-1774545884455
+    Invoice date : 2026-03-26
+    Due date     : 2026-04-25  (full ₹8,85,000 if paid on this date)
+    Max discount : 3.333% (linear — more days early = higher discount)
+    Seller suggests: pay by 2026-04-05  (20/30 days early)
+      → ₹8,65,333.53  (save ₹19,666.47 @ 2.222%)
+    ─────────────────────────────────────────────────────────
+ResultManager: Received status update for unknown task e31a23fa-ba2c-47d2-8b72-f7a89870ce6b
+
+    ✓  DD ACCEPTED — settlement date: 2026-04-10
+    Payable: ₹8,70,250.15  (save ₹14,749.85 @ 1.667%)
+
+  ⋯ DD_ACCEPT sent — invoiceId: INV-1774545884455  settlementDate: 2026-04-10  
+
+    📄  DD INVOICE RECEIVED — FINAL
+    ─────────────────────────────────────────────────────────
+    Invoice ID   : INV-1774545884455
+    Original     : ₹8,85,000
+    Applied Rate →  1.667%
+    PAYABLE      →  ₹8,70,250.15  (saved ₹14,749.85)
+    Settle by   →  2026-04-10
+    ACTUS ID     : INV-1774545884455
+    ACTUS Status : ✓ SUCCESS
+    ─────────────────────────────────────────────────────────
+
+    ✅  END-TO-END WORKFLOW COMPLETE
+    Negotiation → Invoice → Dynamic Discounting → ACTUS
+
+ResultManager: Received status update for unknown task 6fc5d342-d43f-4307-87bc-20553b890d27
+ResultManager: Received status update for unknown task 9a15ba23-3b51-458d-8160-fc3e00694a54
+
+
+3rd terminal : client terminal
+
+kaviy@KaviyaaNagarajan MINGW64 /c/CHAINAIM3003/mcp-servers/Mini-proj-dd/A2A/js
+$ npx tsx src/cli.ts http://localhost:9090
+Warning: Constructing A2AClient with a URL is deprecated. Please use A2AClient.fromCardUrl() instead.
+
+═══════════════════════════════════════
+   NEGOTIATION CLIENT
+═══════════════════════════════════════
+  Agent URL : http://localhost:9090
+
+✓ Connected to: Tommy Buyer Agent
+  AI agent responsible for submitting, negotiating, and tracking purchase orders for TOMMY HILFIGER EUROPE B.V.
+
+  Commands:
+    start negotiation <price>  — begin a new negotiation (price optional)
+    dd accept                  — accept seller's proposed early payment date
+    dd accept YYYY-MM-DD        — choose your own early payment date
+    dd reject                  — decline discount, pay full on due date
+    /new                       — reset session
+    /exit                      — quit
+
+  DD Workflow:
+    1. Run 'start negotiation' and watch the negotiation complete in Terminals 1 & 2.
+    2. When you see the DD Offer in Terminal 2 (Buyer), come back here.        
+    3. Type 'dd accept' or 'dd accept YYYY-MM-DD' to trigger the discounted invoice.
+
+You: start negotiation 360
+
+Tommy Buyer Agent [10:54:41 pm]
+  ✓ Negotiation started
+  Initial offer: ₹360/unit  |  Qty: 2000
+  Waiting for seller response...
+You: dd accept 2026-04-10
+
+Tommy Buyer Agent [10:55:32 pm]
+  ✓ DD accepted — settlement date: 2026-04-10
+
+    Original amount  : ₹8,85,000
+    Discount applied : 1.667%  (15 of 30 days early)
+    Payable          : ₹8,70,250.15
+    Saving           : ₹14,749.85
+
+  Awaiting discounted invoice from seller...
+You:
