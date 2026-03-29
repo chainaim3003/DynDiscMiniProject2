@@ -62,9 +62,8 @@ echo ""
 RESULT=$(docker compose exec -T tsx-shell curl -s -X POST "$VERIFY_URL" \
     -H "Content-Type: application/json" \
     -d "{
-        \"agent_aid\": \"$SUB_AID\",
-        \"controller_aid\": \"$PARENT_AID\",
-        \"verification_type\": \"sub_delegation\"
+        \"aid\": \"$PARENT_AID\",
+        \"agent_aid\": \"$SUB_AID\"
     }")
 
 echo "============================================================"
