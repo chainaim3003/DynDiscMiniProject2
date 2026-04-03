@@ -12,8 +12,6 @@ import {
   Task,
   AgentCard,
   Part,
-  FilePart,
-  DataPart,
 } from "@a2a-js/sdk";
 import { A2AClient } from "@a2a-js/sdk/client";
 
@@ -29,6 +27,7 @@ const C = {
   magenta: "\x1b[35m",
   cyan:    "\x1b[36m",
 };
+
 const dim    = (s: string) => `${C.dim}${s}${C.reset}`;
 const bold   = (s: string) => `${C.bold}${s}${C.reset}`;
 const green  = (s: string) => `${C.green}${s}${C.reset}`;
@@ -48,18 +47,33 @@ let   agentName = "Agent";
 const rl = readline.createInterface({
   input:  process.stdin,
   output: process.stdout,
-  prompt: cyan("You: "),
+  prompt: `\n${C.cyan}You${C.reset}${C.dim} ›${C.reset} `,
 });
 
-// ── Print only the meaningful text from an agent response ─────────────────────
+// ── Pretty-print an agent response ───────────────────────────────────────────
+const BAR_W = 58;
+
 function printAgentResponse(text: string) {
   if (!text.trim()) return;
-  const ts = new Date().toLocaleTimeString();
-  console.log(`\n${bold(agentName)} ${dim(`[${ts}]`)}`);
-  // Each line of the text message, indented
-  for (const line of text.split("\n")) {
-    console.log(`  ${line}`);
+
+  const ts    = new Date().toLocaleTimeString();
+  const lines = text.split("\n");
+  const bar   = `${C.dim}${"─".repeat(BAR_W)}${C.reset}`;
+
+  // Header row: agent name + timestamp
+  console.log("");
+  console.log(
+    `  ${C.cyan}${C.bold}${agentName}${C.reset}` +
+    `  ${C.dim}·  ${ts}${C.reset}`
+  );
+  console.log(`  ${bar}`);
+
+  // Content lines — uniform left-padding + vertical bar
+  for (const line of lines) {
+    console.log(`  ${C.dim}│${C.reset}  ${line}`);
   }
+
+  console.log(`  ${bar}`);
 }
 
 // ── Extract all text parts from an A2A message ────────────────────────────────
@@ -71,17 +85,13 @@ function extractText(parts: Part[]): string {
     .trim();
 }
 
-// ── Process one stream event — show only what matters ────────────────────────
+// ── Process one stream event ──────────────────────────────────────────────────
 function handleEvent(event: any) {
   if (event.kind === "status-update") {
     const e    = event as TaskStatusUpdateEvent;
     const text = e.status.message ? extractText(e.status.message.parts) : "";
-
-    // Update IDs silently
     if (!currentTaskId)    currentTaskId    = e.taskId;
     if (!currentContextId) currentContextId = e.contextId;
-
-    // Only print if there is actual content to show
     if (text) printAgentResponse(text);
 
   } else if (event.kind === "artifact-update") {
@@ -97,13 +107,12 @@ function handleEvent(event: any) {
     if (text) printAgentResponse(text);
 
   } else if (event.kind === "task") {
-    const e = event as Task;
+    const e    = event as Task;
     if (e.id        !== currentTaskId)    currentTaskId    = e.id;
     if (e.contextId !== currentContextId) currentContextId = e.contextId;
     const text = e.status.message ? extractText(e.status.message.parts) : "";
     if (text) printAgentResponse(text);
   }
-  // All other event kinds (A2A protocol internals) are silently ignored
 }
 
 // ── Agent card ────────────────────────────────────────────────────────────────
@@ -111,38 +120,63 @@ async function fetchAgentCard() {
   try {
     const card: AgentCard = await client.getAgentCard();
     agentName = card.name || "Agent";
-    console.log(green(`✓ Connected to: ${bold(agentName)}`));
-    if (card.description) console.log(dim(`  ${card.description}`));
+    console.log(`  ${green("✓")}  Connected to: ${bold(agentName)}`);
+    if (card.description) {
+      // Wrap description at 70 chars
+      const words = card.description.split(" ");
+      let line = "";
+      for (const w of words) {
+        if ((line + w).length > 70) { console.log(dim(`     ${line.trim()}`)); line = ""; }
+        line += w + " ";
+      }
+      if (line.trim()) console.log(dim(`     ${line.trim()}`));
+    }
   } catch {
-    console.log(yellow(`⚠  Could not reach agent at ${serverUrl} — is it running?`));
+    console.log(yellow(`  ⚠  Could not reach agent at ${serverUrl} — is it running?`));
     throw new Error("Agent unreachable");
   }
 }
 
+// ── Startup banner ────────────────────────────────────────────────────────────
+function printBanner(url: string) {
+  const W = 58;
+  const hr = "═".repeat(W);
+  console.log(`\n  ${C.bold}╔${hr}╗${C.reset}`);
+  console.log(`  ${C.bold}║${"  NEGOTIATION CLIENT".padEnd(W)}║${C.reset}`);
+  console.log(`  ${C.bold}╚${hr}╝${C.reset}`);
+  console.log(dim(`  Agent URL : ${url}`));
+  console.log("");
+}
+
+function printHelp() {
+  const W    = 58;
+  const rows: [string, string][] = [
+    ["start negotiation",         "begin negotiation (random opening price)"],
+    ["start negotiation <price>", "begin negotiation at a specific price"],
+    ["/new",                      "reset session (start fresh)"],
+    ["/exit",                     "quit"],
+  ];
+  const cmdW = Math.max(...rows.map(([c]) => c.length)) + 2;
+
+  console.log(dim(`  ${"─".repeat(W)}`));
+  console.log(dim("  COMMANDS"));
+  console.log(dim(`  ${"─".repeat(W)}`));
+  for (const [cmd, desc] of rows) {
+    console.log(`  ${C.cyan}${cmd.padEnd(cmdW)}${C.reset}${C.dim}${desc}${C.reset}`);
+  }
+  console.log(dim(`  ${"─".repeat(W)}`));
+  console.log(dim("  DD is handled autonomously by the buyer agent."));
+  console.log(dim(`  ${"─".repeat(W)}`));
+  console.log("");
+}
+
 // ── Main loop ─────────────────────────────────────────────────────────────────
 async function main() {
-  console.log(bold("\n═══════════════════════════════════════"));
-  console.log(bold("   NEGOTIATION CLIENT"));
-  console.log(bold("═══════════════════════════════════════"));
-  console.log(dim(`  Agent URL : ${serverUrl}`));
-  console.log("");
-
+  printBanner(serverUrl);
   await fetchAgentCard();
+  printHelp();
 
-  console.log(dim("\n  Commands:"));
-  console.log(dim("    start negotiation <price>  — begin a new negotiation (price optional)"));
-  console.log(dim("    dd accept                  — accept seller's proposed early payment date"));
-  console.log(dim("    dd accept YYYY-MM-DD        — choose your own early payment date"));
-  console.log(dim("    dd reject                  — decline discount, pay full on due date"));
-  console.log(dim("    /new                       — reset session"));
-  console.log(dim("    /exit                      — quit"));
-  console.log(dim(""));
-  console.log(dim("  DD Workflow:"));
-  console.log(dim("    1. Run 'start negotiation' and watch the negotiation complete in Terminals 1 & 2."));
-  console.log(dim("    2. When you see the DD Offer in Terminal 2 (Buyer), come back here."));
-  console.log(dim("    3. Type 'dd accept' or 'dd accept YYYY-MM-DD' to trigger the discounted invoice.\n"));
-
-  rl.setPrompt(cyan("You: "));
+  rl.setPrompt(`\n${C.cyan}You${C.reset}${C.dim} ›${C.reset} `);
   rl.prompt();
 
   rl.on("line", async (line) => {
@@ -152,7 +186,7 @@ async function main() {
     if (input.toLowerCase() === "/new") {
       currentTaskId    = undefined;
       currentContextId = undefined;
-      console.log(dim("  Session reset.\n"));
+      console.log(dim("\n  Session reset."));
       rl.prompt();
       return;
     }
@@ -160,16 +194,6 @@ async function main() {
     if (input.toLowerCase() === "/exit") {
       rl.close();
       return;
-    }
-
-    // ── Build and send message ────────────────────────────────────────────────
-
-    // DD commands must start a NEW task — the negotiation task is already
-    // completed and removed from InMemoryTaskStore. Clearing taskId makes
-    // the SDK create a fresh task. We keep contextId to stay in the same
-    // conversation so the buyer agent can find the pending DD offer.
-    if (input.toLowerCase().startsWith("dd ")) {
-      currentTaskId = undefined;
     }
 
     const messagePayload: Message = {
@@ -181,10 +205,8 @@ async function main() {
     if (currentTaskId)    messagePayload.taskId    = currentTaskId;
     if (currentContextId) messagePayload.contextId = currentContextId;
 
-    const params: MessageSendParams = { message: messagePayload };
-
     try {
-      const stream = client.sendMessageStream(params);
+      const stream = client.sendMessageStream({ message: messagePayload } as MessageSendParams);
       for await (const event of stream) {
         handleEvent(event);
       }
@@ -196,12 +218,12 @@ async function main() {
   });
 
   rl.on("close", () => {
-    console.log(yellow("\nGoodbye!\n"));
+    console.log(yellow("\n  Goodbye!\n"));
     process.exit(0);
   });
 }
 
 main().catch((err) => {
-  console.error(red("Fatal error:"), err);
+  console.error(red("  Fatal error:"), err);
   process.exit(1);
 });

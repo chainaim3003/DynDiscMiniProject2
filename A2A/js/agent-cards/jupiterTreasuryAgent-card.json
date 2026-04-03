@@ -1,0 +1,43 @@
+{
+  "name": "Jupiter Treasury Agent",
+  "description": "Autonomous treasury AI agent for JUPITER KNITTING COMPANY. Holds the company balance sheet, runs ACTUS PAM cash flow simulations, and validates whether accepting a sale at a given price is safe for liquidity before the seller commits to any deal.",
+  "url": "http://localhost:7070/",
+  "provider": {
+    "organization": "JUPITER KNITTING COMPANY",
+    "url": "https://jupiterknitting.com"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": true,
+    "stateTransitionHistory": true
+  },
+  "skills": [
+    {
+      "id": "cash_flow_validation",
+      "name": "Cash Flow & Liquidity Validation",
+      "description": "Runs an ACTUS PAM simulation for a proposed sale: models production outflow (IED) and invoice inflow (Maturity), checks whether cash stays above the safety threshold during the Net-30 gap, computes working-capital financing cost, and calculates NPV at the hurdle rate.",
+      "tags": ["treasury", "actus", "cashflow", "liquidity", "risk", "simulation"]
+    },
+    {
+      "id": "balance_management",
+      "name": "Balance Sheet Management",
+      "description": "Maintains the real-time balance sheet of Jupiter Knitting Company including current cash, pending outflows for committed orders, and available free liquidity.",
+      "tags": ["treasury", "balance", "finance", "accounting"]
+    },
+    {
+      "id": "minimum_price_advisory",
+      "name": "Minimum Viable Price Advisory",
+      "description": "When a proposed sale price fails the treasury check, computes the minimum price that restores NPV-positivity and cash safety, enabling the seller agent to counter at the correct floor.",
+      "tags": ["treasury", "pricing", "advisory", "npv", "risk"]
+    }
+  ],
+  "extensions": {
+    "gleifIdentity": {
+      "lei": "3358004DXAMRWRUIYJ05",
+      "legalEntityName": "JUPITER KNITTING COMPANY",
+      "registryName": "JUPITER_REGISTRY",
+      "officialRole": "ChiefFinancialOfficer",
+      "engagementRole": "Treasury Agent"
+    }
+  }
+}

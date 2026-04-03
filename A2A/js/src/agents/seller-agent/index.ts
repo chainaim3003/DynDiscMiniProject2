@@ -1,4 +1,6 @@
 // ================= SELLER AGENT WITH HYBRID LLM + RULE-BASED DECISION MAKING =================
+// Enhanced: consults JupiterTreasuryAgent before accepting any price.
+//           Saves a human-overview success report (.txt) when deal closes.
 import express from "express";
 import cors from "cors";
 import { v4 as uuidv4 } from "uuid";
@@ -37,12 +39,22 @@ import {
   NegotiationData,
   DDOfferData,
   DDAcceptData,
+  TreasuryConsultationSummary,
 } from "../../shared/negotiation-types.js";
 
 import { LLMNegotiationClient, LLMPromptContext } from "../../shared/llm-client.js";
 import { NegotiationLogger, logInternal, suppressSDKNoise } from "../../shared/logger.js";
 import { computeSafeDDRate, computeLinearDiscount, addDays } from "../../shared/dd-calculator.js";
 import { ActusClient } from "../../shared/actus-client.js";
+import {
+  getMarketSnapshot,
+  computeAdjustedSafetyFactor,
+  computeAdjustedMarginPrice,
+  printMarketSnapshot,
+} from "../../shared/market-data-client.js";
+
+// Import TreasuryResult type for the REST response
+import type { TreasuryResult } from "../treasury-agent/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -68,6 +80,12 @@ const SELLER_CONFIG = {
     proposedEarlyPayDays:    10,   // seller proposes buyer pays within 10 days
     safetyFactor:            0.5,  // give away at most 50% of profit as discount
     hurdleRateAnnualized:    0.075,
+  },
+  // Treasury agent
+  treasury: {
+    url: "http://localhost:7070/consult",
+    enabled: true,                // set false to skip treasury consultation
+    timeoutMs: 5000,              // if treasury is slow/down, degrade gracefully
   },
 };
 
@@ -129,6 +147,146 @@ class SellerAgentExecutor implements AgentExecutor {
     }
   }
 
+  // ================= TREASURY CONSULTATION =================
+  /**
+   * Calls JupiterTreasuryAgent synchronously via REST POST /consult.
+   * Returns null on failure (treasury down / timeout) — seller proceeds normally.
+   *
+   * The treasury runs an ACTUS PAM simulation:
+   *   IED: production outflow today
+   *   MD:  invoice inflow after `paymentTermsDays`
+   * and checks: cashPositive ∧ dealProfitable ∧ npvPositive
+   */
+  private async consultTreasury(
+    negotiationId: string,
+    pricePerUnit: number,
+    quantity: number,
+    round: number,
+  ): Promise<TreasuryResult | null> {
+    if (!SELLER_CONFIG.treasury.enabled) return null;
+
+    try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), SELLER_CONFIG.treasury.timeoutMs);
+
+      const response = await fetch(SELLER_CONFIG.treasury.url, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          negotiationId,
+          pricePerUnit,
+          quantity,
+          paymentTerms: SELLER_CONFIG.dd.paymentTermsDays,
+          round,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(tid);
+
+      if (!response.ok) {
+        logInternal(`Treasury returned HTTP ${response.status} — proceeding without validation`);
+        return null;
+      }
+      return await response.json() as TreasuryResult;
+
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        logInternal(`Treasury timeout (${SELLER_CONFIG.treasury.timeoutMs}ms) — proceeding without validation`);
+      } else {
+        logInternal(`Treasury unreachable: ${err?.message ?? err} — proceeding without validation`);
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Applies treasury verdict on top of the LLM/rule-based decision.
+   *
+   * Rules:
+   *   - If treasury APPROVED  → decision passes through unchanged.
+   *   - If treasury REJECTED and decision is ACCEPT  → override to COUNTER at minViablePrice.
+   *   - If treasury REJECTED and decision is COUNTER → floor the counter price at minViablePrice.
+   *   - If treasury REJECTED and we are at maxRounds → do NOT escalate (let normal flow handle it);
+   *     just note the override for the report.
+   *
+   * Returns { decision, overrideApplied }.
+   */
+  private applyTreasuryConstraint(
+    decision: NegotiationDecision,
+    treasuryResult: TreasuryResult | null,
+    state: SellerNegotiationState,
+    logger: NegotiationLogger,
+  ): { decision: NegotiationDecision; overrideApplied: boolean } {
+    if (!treasuryResult || treasuryResult.approved) {
+      return { decision, overrideApplied: false };
+    }
+
+    const minPrice = Math.max(
+      treasuryResult.minViablePrice ?? SELLER_CONFIG.marginPrice,
+      SELLER_CONFIG.marginPrice + state.strategyParams.minProfitMargin,
+    );
+
+    let overrideApplied = false;
+
+    if (decision.action === "ACCEPT") {
+      logInternal(`Treasury override: ACCEPT → COUNTER at ₹${minPrice} (treasury minViablePrice)`);
+      logger.log({
+        round:       state.currentRound,
+        messageType: "TREASURY_OVERRIDE",
+        from:        "SELLER",
+        decision:    "COUNTER_OFFER",
+        reasoning:   `Treasury ACTUS simulation rejected ₹${state.lastBuyerOffer} — ${treasuryResult.failReasons.join("; ")}. Countering at treasury minimum ₹${minPrice}`,
+      } as any);
+      decision = {
+        action:    "COUNTER",
+        price:     minPrice,
+        reasoning: `Treasury ACTUS override: cash/NPV check failed at ₹${state.lastBuyerOffer}. Minimum viable price: ₹${minPrice}`,
+      };
+      overrideApplied = true;
+
+    } else if (decision.action === "COUNTER" && decision.price !== undefined) {
+      if (decision.price < minPrice) {
+        logInternal(`Treasury override: counter price ₹${decision.price} → ₹${minPrice} (treasury floor)`);
+        decision = {
+          ...decision,
+          price:     minPrice,
+          reasoning: `${decision.reasoning} [treasury floor: ₹${minPrice}]`,
+        };
+        overrideApplied = true;
+      }
+    }
+
+    return { decision, overrideApplied };
+  }
+
+  /**
+   * Store treasury summary on the negotiation state so the success report can reference it.
+   */
+  private recordTreasurySummary(
+    state: SellerNegotiationState,
+    treasuryResult: TreasuryResult | null,
+    round: number,
+    priceQueried: number,
+    overrideApplied: boolean,
+  ) {
+    if (!treasuryResult) return;
+
+    const prev = state.lastTreasuryResult;
+    state.lastTreasuryResult = {
+      round,
+      priceQueried,
+      approved:            treasuryResult.approved,
+      npvOfDeal:           treasuryResult.npvOfDeal,
+      netProfit:           treasuryResult.netProfit,
+      projectedMinBalance: treasuryResult.projectedMinBalance,
+      safetyThreshold:     treasuryResult.safetyThreshold,
+      workingCapitalCost:  treasuryResult.workingCapitalCost,
+      minViablePrice:      treasuryResult.minViablePrice,
+      overrideApplied:     overrideApplied || (prev?.overrideApplied ?? false),
+    };
+  }
+
   // ================= HANDLE BUYER INITIAL OFFER =================
   private async handleBuyerOffer(
     data: OfferData,
@@ -169,7 +327,16 @@ class SellerAgentExecutor implements AgentExecutor {
 
     this.negotiations.set(negotiationId, state);
 
-    const decision = await this.makeNegotiationDecision(state);
+    // ── Treasury consultation BEFORE making decision ───────────────────────────
+    logInternal(`Consulting JupiterTreasuryAgent for Round 1 — buyer offer ₹${pricePerUnit}...`);
+    const treasuryResult = await this.consultTreasury(negotiationId, pricePerUnit, quantity, 1);
+
+    let decision = await this.makeNegotiationDecision(state);
+    const { decision: finalDecision, overrideApplied } =
+      this.applyTreasuryConstraint(decision, treasuryResult, state, logger);
+    decision = finalDecision;
+
+    this.recordTreasurySummary(state, treasuryResult, 1, pricePerUnit, overrideApplied);
 
     if (decision.action === "ACCEPT") {
       await this.sendAcceptance(state, logger, contextId);
@@ -181,7 +348,7 @@ class SellerAgentExecutor implements AgentExecutor {
       await this.sendCounterOffer(state, decision.price!, decision.reasoning, logger, contextId);
       this.respond(
         bus, taskId, contextId,
-        `↓ Counter-offer sent: ₹${decision.price}/unit  (buyer offered ₹${pricePerUnit})\nWaiting for buyer response...`
+        `↓ Counter-offer sent: ₹${decision.price}/unit  (buyer offered ₹${pricePerUnit})${overrideApplied ? "  [treasury floor applied]" : ""}\nWaiting for buyer response...`
       );
     } else {
       state.status = "REJECTED";
@@ -245,7 +412,21 @@ class SellerAgentExecutor implements AgentExecutor {
 
     logger.printRoundHeader(state.currentRound, state.maxRounds);
 
-    const decision = await this.makeNegotiationDecision(state);
+    // ── Treasury consultation BEFORE making decision ───────────────────────────
+    logInternal(`Consulting JupiterTreasuryAgent for Round ${state.currentRound} — buyer counter ₹${data.pricePerUnit}...`);
+    const treasuryResult = await this.consultTreasury(
+      state.negotiationId,
+      data.pricePerUnit,
+      state.quantity,
+      state.currentRound,
+    );
+
+    let decision = await this.makeNegotiationDecision(state);
+    const { decision: finalDecision, overrideApplied } =
+      this.applyTreasuryConstraint(decision, treasuryResult, state, logger);
+    decision = finalDecision;
+
+    this.recordTreasurySummary(state, treasuryResult, state.currentRound, data.pricePerUnit, overrideApplied);
 
     if (decision.action === "ACCEPT") {
       await this.sendAcceptance(state, logger, contextId);
@@ -258,7 +439,7 @@ class SellerAgentExecutor implements AgentExecutor {
       await this.sendCounterOffer(state, decision.price!, decision.reasoning, logger, contextId);
       this.respond(
         bus, taskId, contextId,
-        `↓ Counter-offer sent: ₹${decision.price}/unit  (Round ${state.currentRound}/${state.maxRounds})\nWaiting for buyer response...`
+        `↓ Counter-offer sent: ₹${decision.price}/unit  (Round ${state.currentRound}/${state.maxRounds})${overrideApplied ? "  [treasury floor applied]" : ""}\nWaiting for buyer response...`
       );
     } else {
       state.status = "REJECTED";
@@ -285,13 +466,27 @@ class SellerAgentExecutor implements AgentExecutor {
 
     if (logger) {
       logger.printEscalationReceived(data.gap, data.reportPath);
+
+      // ── Save seller-side escalation report (.txt) ─────────────────────────
+      const sellerReportPath = logger.saveEscalationReport({
+        buyerFinalOffer:  data.buyerFinalOffer,
+        sellerFinalOffer: data.sellerFinalOffer,
+        gap:              data.gap,
+        rounds:           data.round,
+        maxRounds:        state?.maxRounds ?? data.round,
+        quantity:         state?.quantity  ?? 0,
+        deliveryDate:     state?.deliveryDate ?? "—",
+        logs:             logger.getLogs(),
+      });
+      logger.printEscalationNotice(data.buyerFinalOffer, data.sellerFinalOffer, data.gap, sellerReportPath);
+
     } else {
       logInternal(`Escalation received for ${data.negotiationId} — gap ₹${data.gap} — report: ${data.reportPath}`);
     }
 
     this.respond(
       bus, taskId, contextId,
-      `⚠ Negotiation escalated to human review.\nGap: ₹${data.gap}  |  Report: ${data.reportPath}`
+      `⚠ Negotiation escalated to human review.\nGap: ₹${data.gap}  |  Buyer report: ${data.reportPath}`
     );
   }
 
@@ -371,9 +566,39 @@ class SellerAgentExecutor implements AgentExecutor {
 
     state.status = "COMPLETED";
 
+    // ── Save success report for human overview ────────────────────────────────
+    const tr = state.lastTreasuryResult;
+    const reportPath = logger.saveSuccessReport({
+      finalPrice:        data.acceptedPrice,
+      quantity:          state.quantity,
+      totalDealValue:    state.totalRevenue!,
+      deliveryDate:      state.deliveryDate,
+      paymentTerms:      `Net ${SELLER_CONFIG.dd.paymentTermsDays}`,
+      roundsUsed:        state.currentRound,
+      maxRounds:         state.maxRounds,
+      logs:              logger.getLogs(),
+      buyerStartPrice:   buyerStart,
+      sellerStartPrice:  sellerStart,
+      profitPerUnit:     state.profitPerUnit,
+      totalRevenue:      state.totalRevenue,
+      marginPrice:       SELLER_CONFIG.marginPrice,
+      treasury: tr ? {
+        consultedRounds:      [tr.round],
+        allApproved:          tr.approved,
+        overrideApplied:      tr.overrideApplied,
+        finalNPV:             tr.npvOfDeal,
+        finalNetProfit:       tr.netProfit,
+        projectedMinBalance:  tr.projectedMinBalance,
+        safetyThreshold:      tr.safetyThreshold,
+        workingCapitalCost:   tr.workingCapitalCost,
+      } : undefined,
+    });
+
+    logger.printSuccessNotice(data.acceptedPrice, state.totalRevenue!, reportPath);
+
     this.respond(
       bus, taskId, contextId,
-      `✓✓ Deal Closed!\n\nFinal Price    : ₹${data.acceptedPrice}/unit\nProfit         : ₹${state.profitPerUnit}/unit\nTotal Revenue  : ₹${state.totalRevenue?.toLocaleString()}\nWaiting for Purchase Order...`
+      `✓✓ Deal Closed!\n\nFinal Price    : ₹${data.acceptedPrice}/unit\nProfit         : ₹${state.profitPerUnit}/unit\nTotal Revenue  : ₹${state.totalRevenue?.toLocaleString()}\nSuccess report : ${reportPath}\nWaiting for Purchase Order...`
     );
   }
 
@@ -401,11 +626,14 @@ class SellerAgentExecutor implements AgentExecutor {
 
     // ── Step 2: Compute safe DD rate from seller's margin ─────────────────────
     const agreedPrice = state.agreedPrice!;
-    const safeDDRate  = computeSafeDDRate(
-      agreedPrice,
-      SELLER_CONFIG.marginPrice,
-      SELLER_CONFIG.dd.safetyFactor
-    );
+    // L4: Fetch live SOFR + commodity data to compute market-informed DD rate
+    const market = await getMarketSnapshot();
+    printMarketSnapshot(market, "L4 DD Offer — Market-Informed Parameters");
+    const adjustedSafetyFactor = computeAdjustedSafetyFactor(market.effectiveBorrowingRate);
+    const adjustedMarginPrice  = computeAdjustedMarginPrice(SELLER_CONFIG.marginPrice, market.commodityIndex);
+    logInternal(`[L4] margin ₹${SELLER_CONFIG.marginPrice}→₹${adjustedMarginPrice}  factor ${SELLER_CONFIG.dd.safetyFactor}→${adjustedSafetyFactor}  EBR ${(market.effectiveBorrowingRate * 100).toFixed(2)}%`);
+    const safeDDRate = computeSafeDDRate(agreedPrice, SELLER_CONFIG.marginPrice, adjustedSafetyFactor);
+    logInternal(`[L4] DD basis: margin \u20b9${SELLER_CONFIG.marginPrice} (static)  adjusted \u20b9${adjustedMarginPrice} (commodity info only)  factor ${adjustedSafetyFactor} (SOFR-driven)`);
 
     if (safeDDRate <= 0) {
       logInternal("DD rate is 0 (no profit margin) — skipping DD offer");
@@ -491,52 +719,101 @@ class SellerAgentExecutor implements AgentExecutor {
       data.chosenSettlementDate
     );
 
-    // ── Submit to ACTUS ───────────────────────────────────────────────────────
-    logInternal(`Submitting DD contract to ACTUS for ${data.invoiceId}...`);
+    // ── Sub-delegate to JupiterTreasuryAgent: /dd-cashflow-schedule (L4) ─────
+    // Treasury fetches live SOFR, builds SOFR-adjusted declining reference
+    // series, sets hurdle = EBR+300bps, runs 4-step ACTUS PAM, and returns
+    // the full cashflow schedule. Falls back to direct ACTUS on failure.
+    logInternal(`Sub-delegating DD cashflow schedule to JupiterTreasuryAgent...`);
 
-    const actusResult = await this.actusClient.submitDDContract({
-      contractId:           data.invoiceId,
-      negotiationId:        data.negotiationId,
-      invoiceDate,
-      dueDate,
-      settlementDate:       data.chosenSettlementDate,
-      notionalAmount:       totalAmount,
-      maxDiscountRate:      safeDDRate,
-      hurdleRateAnnualized: SELLER_CONFIG.dd.hurdleRateAnnualized,
-      sellerRevenue:        state.totalRevenue ?? totalAmount,
-    });
+    let actusSuccess    = false;
+    let actusContractId = data.invoiceId;
+    let actusScenarioId = "";
+    let actusError:     string | undefined;
+    let marketCtx:      string = "";
 
-    if (actusResult.success) {
-      logInternal(`ACTUS simulation SUCCESS — contractId: ${actusResult.contractId}  scenarioId: ${actusResult.scenarioId}`);
-    } else {
-      logInternal(`ACTUS simulation FAILED — ${actusResult.error}`);
+    try {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), 15000);
+      const resp = await fetch("http://localhost:7070/dd-cashflow-schedule", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          negotiationId:   data.negotiationId,
+          invoiceId:       data.invoiceId,
+          settlementDate:  data.chosenSettlementDate,
+          notionalAmount:  totalAmount,
+          maxDiscountRate: safeDDRate,
+          invoiceDate,
+          dueDate,
+          sellerRevenue:   state.totalRevenue ?? subtotal,
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(tid);
+
+      if (resp.ok) {
+        const tv      = await resp.json() as any;
+        actusSuccess  = tv.success  ?? false;
+        actusContractId = tv.contractId ?? data.invoiceId;
+        actusScenarioId = tv.scenarioId ?? "";
+        actusError    = tv.error;
+        if (tv.market) {
+          const m = tv.market;
+          marketCtx = `  SOFR ${(m.sofrRate * 100).toFixed(2)}% (${m.sofrSource})  hurdle ${(m.adjustedHurdleRate * 100).toFixed(2)}%  EBR ${(m.effectiveBorrowingRate * 100).toFixed(2)}%`;
+        }
+        if (actusSuccess)
+          logInternal(`Treasury cashflow schedule ✓ — ${(tv.events ?? []).length} events${marketCtx}`);
+        else
+          logInternal(`Treasury cashflow schedule failed: ${actusError}`);
+      } else {
+        throw new Error(`Treasury HTTP ${resp.status}`);
+      }
+    } catch (err: any) {
+      logInternal(`Treasury sub-delegation failed: ${err?.message ?? err} — falling back to direct ACTUS (L3)`);
+      const fallback = await this.actusClient.submitDDContract({
+        contractId:           data.invoiceId,
+        negotiationId:        data.negotiationId,
+        invoiceDate, dueDate,
+        settlementDate:       data.chosenSettlementDate,
+        notionalAmount:       totalAmount,
+        maxDiscountRate:      safeDDRate,
+        hurdleRateAnnualized: SELLER_CONFIG.dd.hurdleRateAnnualized,
+        sellerRevenue:        state.totalRevenue ?? totalAmount,
+      });
+      actusSuccess    = fallback.success;
+      actusContractId = fallback.contractId;
+      actusScenarioId = fallback.scenarioId;
+      actusError      = fallback.error;
+      if (fallback.success)
+        logInternal(`Fallback ACTUS ✓ — contractId: ${fallback.contractId}`);
+      else
+        logInternal(`Fallback ACTUS failed — ${fallback.error}`);
     }
 
     // ── Build and send DD_INVOICE ─────────────────────────────────────────────
     const ddInvoice = {
-      type:                    "DD_INVOICE",
-      invoiceId:               data.invoiceId,
-      negotiationId:           data.negotiationId,
-      originalTotal:           totalAmount,
-      discountedTotal:         ddResult.discountedAmount,
-      savingAmount:            ddResult.savingAmount,
-      appliedRate:             ddResult.appliedRate,
-      settlementDate:          data.chosenSettlementDate,
+      type:                  "DD_INVOICE",
+      invoiceId:             data.invoiceId,
+      negotiationId:         data.negotiationId,
+      originalTotal:         totalAmount,
+      discountedTotal:       ddResult.discountedAmount,
+      savingAmount:          ddResult.savingAmount,
+      appliedRate:           ddResult.appliedRate,
+      settlementDate:        data.chosenSettlementDate,
       dueDate,
-      actusContractId:         actusResult.contractId,
-      actusScenarioId:         actusResult.scenarioId,
-      actusSimulationStatus:   actusResult.success ? "SUCCESS" : "FAILED",
-      actusError:              actusResult.error,
+      actusContractId,
+      actusScenarioId,
+      actusSimulationStatus: actusSuccess ? "SUCCESS" : "FAILED",
+      actusError,
     };
 
     logger.printDDInvoice(ddInvoice);
     await this.sendToBuyer(ddInvoice, contextId);
-
     state.status = "DD_COMPLETED";
 
     this.respond(
       bus, taskId, contextId,
-      `✅ DD Invoice sent!\n\nOriginal   : ₹${totalAmount.toLocaleString()}\nDiscounted : ₹${ddResult.discountedAmount.toLocaleString()}  (${(ddResult.appliedRate * 100).toFixed(3)}% off)\nSaving     : ₹${ddResult.savingAmount.toLocaleString()}\nSettle by  : ${data.chosenSettlementDate}\nACTUS      : ${actusResult.success ? "✓ Simulation complete" : "⚠ " + actusResult.error}\n\nWorkflow complete!`
+      `✅ DD Invoice sent!\n\nOriginal   : ₹${totalAmount.toLocaleString()}\nDiscounted : ₹${ddResult.discountedAmount.toLocaleString()}  (${(ddResult.appliedRate * 100).toFixed(3)}% off)\nSaving     : ₹${ddResult.savingAmount.toLocaleString()}\nSettle by  : ${data.chosenSettlementDate}\nACTUS      : ${actusSuccess ? "✓ Simulation complete (treasury sub-delegation)" : "⚠ " + actusError}${marketCtx ? "\n" + marketCtx : ""}\n\nWorkflow complete!`
     );
   }
 
@@ -553,6 +830,8 @@ class SellerAgentExecutor implements AgentExecutor {
   }
 
   private async getLLMDecision(state: SellerNegotiationState): Promise<NegotiationDecision> {
+    // L4: fetch market snapshot so LLM can reason about SOFR and cotton prices
+    const market = await getMarketSnapshot();
     const context: LLMPromptContext = {
       role:           "SELLER",
       round:          state.currentRound,
@@ -560,10 +839,14 @@ class SellerAgentExecutor implements AgentExecutor {
       lastOwnOffer:   state.lastSellerOffer,
       lastTheirOffer: state.lastBuyerOffer,
       history:        state.history,
-      // Pass margin + minProfitMargin as the effective floor so the LLM
-      // never reasons about accepting a zero-profit deal.
       constraints:    { marginPrice: state.marginPrice + state.strategyParams.minProfitMargin, quantity: state.quantity },
       targetPrice:    TARGET_PRICE,
+      marketContext: {
+        sofrRate:               market.sofrRate,
+        cottonPricePerLb:       market.cottonPricePerLb,
+        effectiveBorrowingRate: market.effectiveBorrowingRate,
+        sofrSource:             market.sofrSource,
+      },
     };
     const llmResponse = await this.llmClient.getNegotiationDecision(context);
     return { action: llmResponse.action, price: llmResponse.price, reasoning: llmResponse.reasoning };
@@ -852,7 +1135,8 @@ async function main() {
     console.log(`    Target Price : ₹${TARGET_PRICE}/unit`);
     console.log(`    Target Profit: ${(SELLER_CONFIG.targetProfitPercentage * 100).toFixed(0)}%`);
     console.log(`    Max Rounds   : ${SELLER_CONFIG.maxRounds}`);
-    console.log(`    DD Safety    : ${SELLER_CONFIG.dd.safetyFactor * 100}%  |  Payment Terms: Net ${SELLER_CONFIG.dd.paymentTermsDays}\n`);
+    console.log(`    DD Safety    : ${SELLER_CONFIG.dd.safetyFactor * 100}%  |  Payment Terms: Net ${SELLER_CONFIG.dd.paymentTermsDays}`);
+    console.log(`    Treasury     : ${SELLER_CONFIG.treasury.enabled ? `✓ consulting ${SELLER_CONFIG.treasury.url}` : "disabled"}\n`);
   });
 }
 

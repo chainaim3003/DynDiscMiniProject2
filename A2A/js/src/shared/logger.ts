@@ -306,6 +306,15 @@ export class NegotiationLogger {
         console.log(`  ${C.dim}${"═".repeat(W)}${C.reset}`);
     }
 
+    // ── Success report terminal notice ────────────────────────────────────────
+    printSuccessNotice(finalPrice: number, totalValue: number, reportPath: string) {
+        console.log("");
+        console.log(`  ${C.bgGreen + C.bold + C.white}  ✅  SUCCESS REPORT SAVED — HUMAN OVERVIEW${"".padEnd(W - 41)}  ${C.reset}`);
+        console.log(`  ${C.green}  Final Price : ₹${finalPrice}/unit  |  Total: ₹${totalValue.toLocaleString()}${C.reset}`);
+        console.log(`  ${C.bold}  Report → ${reportPath}${C.reset}`);
+        console.log(`  ${C.dim}${"═".repeat(W)}${C.reset}`);
+    }
+
     // ── Write escalation report to disk ──────────────────────────────────────
     saveEscalationReport(params: {
         buyerFinalOffer:  number;
@@ -323,7 +332,7 @@ export class NegotiationLogger {
             fs.mkdirSync(escalationsDir, { recursive: true });
         }
 
-        const filePath = path.join(escalationsDir, `${this.negotiationId}_escalation.txt`);
+        const filePath = path.join(escalationsDir, `${this.negotiationId}_escalation_${this.myRole}.txt`);
         const now      = new Date();
 
         const lines: string[] = [];
@@ -393,6 +402,175 @@ export class NegotiationLogger {
         lines.push(`  B)  Accept BUYER price      →  ₹${params.buyerFinalOffer} / unit`);
         lines.push(`  C)  Split the difference    →  ₹${Math.round((params.buyerFinalOffer + params.sellerFinalOffer) / 2)} / unit`);
         lines.push(`  D)  Reject — do not proceed`);
+        lines.push("");
+        lines.push(hr);
+        lines.push(`Generated : ${now.toISOString()}`);
+        lines.push(hr);
+
+        fs.writeFileSync(filePath, lines.join("\n"), "utf8");
+        return filePath;
+    }
+
+    // ── Write SUCCESS report to disk (human overview of completed deal) ───────
+    saveSuccessReport(params: {
+        finalPrice:         number;
+        quantity:           number;
+        totalDealValue:     number;
+        deliveryDate:       string;
+        paymentTerms:       string;
+        roundsUsed:         number;
+        maxRounds:          number;
+        logs:               NegotiationLog[];
+        // Optional pricing origin context
+        buyerStartPrice?:   number;
+        sellerStartPrice?:  number;
+        // Seller-only fields
+        profitPerUnit?:     number;
+        totalRevenue?:      number;
+        marginPrice?:       number;
+        // Treasury summary (seller-only, when treasury was consulted)
+        treasury?: {
+            consultedRounds:      number[];
+            allApproved:          boolean;
+            overrideApplied:      boolean;
+            finalNPV?:            number;
+            finalNetProfit?:      number;
+            projectedMinBalance?: number;
+            safetyThreshold?:     number;
+            workingCapitalCost?:  number;
+        };
+    }): string {
+        const reportsDir = path.resolve(__dirname, "..", "escalations");
+        if (!fs.existsSync(reportsDir)) {
+            fs.mkdirSync(reportsDir, { recursive: true });
+        }
+
+        const filePath = path.join(reportsDir, `${this.negotiationId}_success_${this.myRole}.txt`);
+        const now      = new Date();
+        const hr       = "─".repeat(60);
+        const lines: string[] = [];
+
+        lines.push("╔══════════════════════════════════════════════════════════════╗");
+        lines.push("║       NEGOTIATION SUCCESS REPORT — HUMAN OVERVIEW            ║");
+        lines.push("╚══════════════════════════════════════════════════════════════╝");
+        lines.push("");
+        lines.push(`Negotiation ID   : ${this.negotiationId}`);
+        lines.push(`Date / Time      : ${now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} ${now.toLocaleTimeString()}`);
+        lines.push(`Outcome          : DEAL CLOSED — Agreement reached in ${params.roundsUsed} round(s) (max ${params.maxRounds})`);
+        lines.push(`Perspective      : ${this.myRole}`);
+        lines.push("");
+
+        lines.push(hr);
+        lines.push("AGREED DEAL TERMS");
+        lines.push(hr);
+        lines.push(`Agreed Price     : Rs.${params.finalPrice} / unit`);
+        lines.push(`Quantity         : ${params.quantity.toLocaleString()} units`);
+        lines.push(`Total Deal Value : Rs.${params.totalDealValue.toLocaleString()}`);
+        lines.push(`Delivery Date    : ${params.deliveryDate}`);
+        lines.push(`Payment Terms    : ${params.paymentTerms}`);
+        lines.push("");
+
+        if (params.profitPerUnit !== undefined || params.totalRevenue !== undefined) {
+            lines.push(hr);
+            lines.push("SELLER FINANCIALS (Jupiter Knitting Company)");
+            lines.push(hr);
+            if (params.profitPerUnit !== undefined) {
+                lines.push(`Profit per unit  : Rs.${params.profitPerUnit}`);
+                if (params.marginPrice !== undefined) {
+                    const pct = ((params.profitPerUnit / params.marginPrice) * 100).toFixed(1);
+                    lines.push(`Margin (%)       : ${pct}%  above cost floor Rs.${params.marginPrice}`);
+                }
+            }
+            if (params.totalRevenue !== undefined) {
+                lines.push(`Total Revenue    : Rs.${params.totalRevenue.toLocaleString()}`);
+            }
+            lines.push("");
+        }
+
+        lines.push(hr);
+        lines.push("PRICE TRAIL");
+        lines.push(hr);
+        lines.push(`${"Rnd".padEnd(8)}${"Buyer".padEnd(14)}${"Seller".padEnd(14)}${"Gap".padEnd(12)}`);
+        lines.push("─".repeat(48));
+
+        const trail = new Map<number, { buyer?: number; seller?: number }>();
+        for (const log of params.logs) {
+            if (log.offeredPrice === undefined) continue;
+            if (!trail.has(log.round)) trail.set(log.round, {});
+            const entry = trail.get(log.round)!;
+            if (log.from === "BUYER")  entry.buyer  = log.offeredPrice;
+            if (log.from === "SELLER") entry.seller = log.offeredPrice;
+        }
+        for (const [round, e] of [...trail.entries()].sort((a, b) => a[0] - b[0])) {
+            const b   = e.buyer  !== undefined ? `Rs.${e.buyer}`  : "—";
+            const s   = e.seller !== undefined ? `Rs.${e.seller}` : "—";
+            const gap = (e.buyer !== undefined && e.seller !== undefined)
+                ? `Rs.${Math.abs(e.seller - e.buyer)}`
+                : "—";
+            lines.push(`${String(round).padEnd(8)}${b.padEnd(14)}${s.padEnd(14)}${gap.padEnd(12)}`);
+        }
+
+        if (params.buyerStartPrice !== undefined && params.sellerStartPrice !== undefined) {
+            lines.push("");
+            const bc = params.finalPrice - params.buyerStartPrice;
+            const sc = params.sellerStartPrice - params.finalPrice;
+            lines.push(`Buyer conceded   : Rs.${bc}  (Rs.${params.buyerStartPrice} -> Rs.${params.finalPrice})`);
+            lines.push(`Seller conceded  : Rs.${sc}  (Rs.${params.sellerStartPrice} -> Rs.${params.finalPrice})`);
+        }
+
+        lines.push("");
+        lines.push(hr);
+        lines.push("AGENT REASONING — FINAL ROUND");
+        lines.push(hr);
+        const finalLogs = params.logs.filter(l => l.round === params.roundsUsed && l.reasoning);
+        if (finalLogs.length > 0) {
+            for (const log of finalLogs) {
+                lines.push(`${log.from.padEnd(8)}: ${log.reasoning}`);
+            }
+        } else {
+            lines.push("(no reasoning captured for final round)");
+        }
+
+        if (params.treasury) {
+            lines.push("");
+            lines.push(hr);
+            lines.push("TREASURY VALIDATION (JupiterTreasuryAgent — ACTUS PAM Simulation)");
+            lines.push(hr);
+            lines.push(`Consulted rounds : ${params.treasury.consultedRounds.join(", ")}`);
+            lines.push(`All checks passed: ${params.treasury.allApproved ? "YES" : "NO — override(s) applied"}`);
+            if (params.treasury.overrideApplied) {
+                lines.push("Override applied : YES — seller countered at treasury minimum viable price in at least one round");
+            }
+            if (params.treasury.finalNPV !== undefined) {
+                lines.push(`Deal NPV         : Rs.${params.treasury.finalNPV.toLocaleString()}`);
+            }
+            if (params.treasury.finalNetProfit !== undefined) {
+                lines.push(`Net profit (adj.): Rs.${params.treasury.finalNetProfit.toLocaleString()} (after working capital financing cost)`);
+            }
+            if (params.treasury.workingCapitalCost !== undefined) {
+                lines.push(`Working cap. cost: Rs.${params.treasury.workingCapitalCost.toLocaleString()}`);
+            }
+            if (params.treasury.projectedMinBalance !== undefined && params.treasury.safetyThreshold !== undefined) {
+                const safe = params.treasury.projectedMinBalance >= params.treasury.safetyThreshold;
+                lines.push(`Gap cash position: Rs.${params.treasury.projectedMinBalance.toLocaleString()} ${safe ? "[SAFE]" : "[BELOW THRESHOLD]"}  (threshold Rs.${params.treasury.safetyThreshold.toLocaleString()})`);
+            }
+        }
+
+        lines.push("");
+        lines.push(hr);
+        lines.push("HUMAN REVIEW CHECKLIST");
+        lines.push(hr);
+        lines.push("This deal closed autonomously. Please confirm:");
+        lines.push("");
+        lines.push(`  [x]  Final price Rs.${params.finalPrice}/unit is within procurement policy`);
+        lines.push(`  [x]  Delivery date ${params.deliveryDate} is operationally achievable`);
+        lines.push(`  [x]  Payment terms ${params.paymentTerms} are acceptable to finance`);
+        if (params.treasury?.overrideApplied) {
+            lines.push("  [!]  Treasury override was applied — verify final cash position is adequate");
+        }
+        if (params.treasury && !params.treasury.allApproved) {
+            lines.push("  [!]  At least one treasury check failed — review override logic");
+        }
         lines.push("");
         lines.push(hr);
         lines.push(`Generated : ${now.toISOString()}`);

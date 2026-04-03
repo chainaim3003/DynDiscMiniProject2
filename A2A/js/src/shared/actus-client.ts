@@ -8,15 +8,17 @@ export interface ActusConfig {
 }
 
 export interface ActusDDParams {
-    contractId:           string;   // = invoiceId
-    negotiationId:        string;
-    invoiceDate:          string;   // ISO date
-    dueDate:              string;   // ISO date
-    settlementDate:       string;   // ISO date — buyer's chosen early payment date
-    notionalAmount:       number;   // full invoice total (incl. tax)
-    maxDiscountRate:      number;   // from computeSafeDDRate()
-    hurdleRateAnnualized: number;   // default 0.075 (matches DD-3 baseline)
-    sellerRevenue:        number;   // used as flat reference index value
+    contractId:             string;   // = invoiceId
+    negotiationId:          string;
+    invoiceDate:            string;   // ISO date
+    dueDate:                string;   // ISO date
+    settlementDate:         string;   // ISO date — buyer's chosen early payment date
+    notionalAmount:         number;   // full invoice total (incl. tax)
+    maxDiscountRate:        number;   // from computeSafeDDRate()
+    hurdleRateAnnualized:   number;   // static=0.075, L4=SOFR+300bps
+    sellerRevenue:          number;   // used as reference index baseline
+    // L4: pass a SOFR-adjusted declining series instead of flat
+    referenceIndexSeries?:  { time: string; value: number }[];
 }
 
 export interface ActusSubmitResult {
@@ -61,12 +63,16 @@ export class ActusClient {
             d.includes("T") ? d : `${d}T00:00:00`;
 
         try {
-            // ── Step 1: Add Reference Index (seller cash = total revenue) ─────
+            // ── Step 1: Add Reference Index ───────────────────────────────────
+            // L3: flat daily series  |  L4: SOFR-adjusted declining curve
+            const indexSeries = params.referenceIndexSeries
+                ?? this.buildFlatSeries(params.invoiceDate, params.dueDate, params.sellerRevenue);
+
             await this.post(`${this.riskServiceUrl}/addReferenceIndex`, {
                 riskFactorID:     refId,
                 marketObjectCode: "SELLER_CASH",
                 base: 1,
-                data: this.buildFlatSeries(params.invoiceDate, params.dueDate, params.sellerRevenue),
+                data: indexSeries,
             });
 
             // ── Step 2: Add Early Settlement Model (LINEAR) ───────────────────

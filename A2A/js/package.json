@@ -14,7 +14,8 @@
     "agents:coder": "npx tsx src/agents/coder/index.ts",
     "agents:content-editor": "npx tsx src/agents/content-editor/index.ts",
     "agents:seller": "npx tsx src/agents/seller-agent/index.ts",
-    "agents:buyer": "npx tsx src/agents/buyer-agent/index.ts"
+    "agents:buyer": "npx tsx src/agents/buyer-agent/index.ts",
+    "agents:treasury": "npx tsx src/agents/treasury-agent/index.ts"
   },
   "dependencies": {
     "@a2a-js/sdk": "^0.3.3",

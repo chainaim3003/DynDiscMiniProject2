@@ -233,6 +233,9 @@ export interface SellerNegotiationState {
         dealPriority: number; // 0-1
         minProfitMargin: number;
     };
+
+    // Treasury consultation results (most recent)
+    lastTreasuryResult?: TreasuryConsultationSummary;
 }
 
 // ================= DECISION MAKING =================
@@ -248,6 +251,37 @@ export interface LLMResponse {
     price?: number;
     reasoning: string;
     confidence?: number;
+}
+
+// ================= TREASURY TYPES =================
+
+/**
+ * Query sent from SellerAgent → JupiterTreasuryAgent.
+ * Mirrors the REST body for POST /consult.
+ */
+export interface TreasuryConsultationQuery {
+    negotiationId: string;
+    pricePerUnit:  number;
+    quantity:      number;
+    paymentTerms:  number;   // days (e.g. 30 for Net 30)
+    round:         number;
+}
+
+/**
+ * A concise summary stored on SellerNegotiationState for use
+ * in success reports (avoids importing the full TreasuryResult type).
+ */
+export interface TreasuryConsultationSummary {
+    round:               number;
+    priceQueried:        number;
+    approved:            boolean;
+    npvOfDeal:           number;
+    netProfit:           number;
+    projectedMinBalance: number;
+    safetyThreshold:     number;
+    workingCapitalCost:  number;
+    minViablePrice?:     number;
+    overrideApplied:     boolean;   // true if treasury's minViablePrice overrode the LLM decision
 }
 
 // ================= LOGGING =================

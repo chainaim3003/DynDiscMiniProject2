@@ -66,14 +66,19 @@ pnpm run agents:seller
 pnpm run agents:buyer
 ```
 
-**Terminal 3 - CLI to trigger negotiation:**
+**Terminal 3 - Treasury Agent:**
+```bash
+pnpm run agents:buyer
+```
+
+**Terminal 4 - CLI to trigger negotiation:**
 ```bash
 pnpm run a2a:cli http://localhost:9090
 ```
 
 Then type:
 ```
-start negotiation
+start negotiation <price>
 ```
 
 ### Option 2: Script Automation (Optional)
