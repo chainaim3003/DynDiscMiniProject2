@@ -1,7 +1,7 @@
 {
   "name": "Jupiter Seller Agent",
   "description": "Autonomous AI agent responsible for initiating, negotiating, and managing sales orders for JUPITER KNITTING COMPANY.",
-  "url": "http://localhost:8080/",
+  "url": "https://jupiter-agent.com/",
   "provider": {
     "organization": "JUPITER KNITTING COMPANY",
     "url": "https://jupiterknitting.com"
@@ -69,12 +69,12 @@
     "gleifIdentity": {
       "lei": "3358004DXAMRWRUIYJ05",
       "legalEntityName": "JUPITER KNITTING COMPANY",
-      "registryName": "JUPITER_REGISTRY",
-      "qvi": "EP2S_kKiiLVQGVhYrhaPXSW7xsh2tNZL9wIOyTXOMJyr",
-      "officialRole": "ChiefSalesOfficer",
-      "engagementRole": "Seller Agent"
+      "registryName": "Jupiter_Knitting_Company-oor-registry",
+      "qvi": "EP2S_kKiiLVQGVhYrhaPXSW7xsh2tNZL9wIOyTXOMJyr"
     },
     "vLEImetadata": {
+      "agentName": "jupiterSellerAgent",
+      "oorHolderName": "Jupiter_Chief_Sales_Officer",
       "delegatorAID": "EC10Jrv6FPRvKXh3-mQyNbGCfiSWW7V1xlxAjBRd88Wb",
       "delegateeAID": "ENR7Xj2xCtdwMUAbCbBHYSu1Iv029w2qtc_zjLyo740b",
       "delegatorSAID": "EOjR5deBPCmFAW-kELbtafp-9TMPHEbcystcHgT0gabp",
@@ -86,12 +86,7 @@
       "verificationPath": [
         "GLEIF_ROOT → QVI",
         "QVI → JUPITER KNITTING COMPANY → Chief Sales Officer → jupiterSellerAgent"
-      ],
-      "status": "verified",
-      "verificationEndpoint": "http://vlei-verification:9723/verify/agent-delegation",
-      "timestamp": "2026-04-04T18:49:57.562Z",
-      "agentName": "jupiterSellerAgent",
-      "oorHolderName": "Jupiter_Chief_Sales_Officer"
+      ]
     },
     "gleifVerification": {
       "gleifVerificationEndpoint": "https://gleif.org/api/v1/lei/3358004DXAMRWRUIYJ05"

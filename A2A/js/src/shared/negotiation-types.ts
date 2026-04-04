@@ -153,6 +153,47 @@ export type NegotiationData =
     | DDAcceptData
     | DDInvoiceData;
 
+// ================= vLEI / IPEX AUDIT RECORDS =================
+// These are stored on the negotiation state and saved to the JSON audit file.
+
+/** Record of a vLEI delegation verification event */
+export interface VLEIAuditRecord {
+    verified:            boolean;
+    agentName:           string;
+    agentAID:            string;
+    oorHolderName:       string;
+    legalEntityName:     string;
+    lei:                 string;
+    trustChain:          string[];
+    verifiedAt:          string;
+    verificationScript:  string;   // "DEEP" | "DEEP-EXT"
+    verificationType:    string;   // "STANDARD" | "EXTERNAL"
+    error?:              string;
+}
+
+/** Record of an IPEX credential exchange event */
+export interface IPEXAuditRecord {
+    invoiceId:           string;
+    invoiceType:         "INVOICE" | "DD_INVOICE";
+    credentialSAID?:     string;
+    grantSAID?:          string;
+    admitSAID?:          string;
+    issued:              boolean;
+    granted:             boolean;
+    admitted:            boolean;
+    timestamp:           string;
+    error?:              string;
+}
+
+/** Market data snapshot captured during negotiation */
+export interface MarketAuditRecord {
+    sofrRate:               number;
+    sofrSource:             string;   // "FRED" | "SIMULATED"
+    cottonPricePerLb:       number;
+    effectiveBorrowingRate: number;
+    capturedAt:             string;
+}
+
 // ================= STATE MANAGEMENT =================
 
 export interface RoundHistory {
@@ -192,10 +233,16 @@ export interface BuyerNegotiationState {
 
     // Strategy
     strategyParams: {
-        aggressiveness: number; // 0-1
-        riskTolerance: number; // 0-1
+        aggressiveness: number;
+        riskTolerance: number;
         initialOfferRange: { min: number; max: number };
     };
+
+    // ── Audit trail (Step 5) ──────────────────────────────────────────────────
+    vleiVerification?:  VLEIAuditRecord;    // buyer verified seller
+    ipexInvoice?:       IPEXAuditRecord;    // admitted invoice credential
+    ipexDDInvoice?:     IPEXAuditRecord;    // admitted DD invoice credential
+    marketSnapshot?:    MarketAuditRecord;  // market data at negotiation time
 }
 
 export interface SellerNegotiationState {
@@ -229,13 +276,19 @@ export interface SellerNegotiationState {
 
     // Strategy
     strategyParams: {
-        flexibility: number; // 0-1
-        dealPriority: number; // 0-1
+        flexibility: number;
+        dealPriority: number;
         minProfitMargin: number;
     };
 
     // Treasury consultation results (most recent)
     lastTreasuryResult?: TreasuryConsultationSummary;
+
+    // ── Audit trail (Step 5) ──────────────────────────────────────────────────
+    vleiVerification?:  VLEIAuditRecord;    // seller verified buyer
+    ipexInvoice?:       IPEXAuditRecord;    // issued/granted invoice credential
+    ipexDDInvoice?:     IPEXAuditRecord;    // issued/granted DD invoice credential
+    marketSnapshot?:    MarketAuditRecord;  // market data at negotiation time
 }
 
 // ================= DECISION MAKING =================
@@ -255,22 +308,14 @@ export interface LLMResponse {
 
 // ================= TREASURY TYPES =================
 
-/**
- * Query sent from SellerAgent → JupiterTreasuryAgent.
- * Mirrors the REST body for POST /consult.
- */
 export interface TreasuryConsultationQuery {
     negotiationId: string;
     pricePerUnit:  number;
     quantity:      number;
-    paymentTerms:  number;   // days (e.g. 30 for Net 30)
+    paymentTerms:  number;
     round:         number;
 }
 
-/**
- * A concise summary stored on SellerNegotiationState for use
- * in success reports (avoids importing the full TreasuryResult type).
- */
 export interface TreasuryConsultationSummary {
     round:               number;
     priceQueried:        number;
@@ -281,7 +326,7 @@ export interface TreasuryConsultationSummary {
     safetyThreshold:     number;
     workingCapitalCost:  number;
     minViablePrice?:     number;
-    overrideApplied:     boolean;   // true if treasury's minViablePrice overrode the LLM decision
+    overrideApplied:     boolean;
 }
 
 // ================= LOGGING =================
@@ -293,17 +338,95 @@ export interface NegotiationLog {
     messageType: string;
     from: AgentRole;
 
-    // Price information
     offeredPrice?: number;
     previousPrice?: number;
     priceMovement?: number;
     priceMovementPercent?: number;
 
-    // Decision context
     decision: NegotiationAction;
     reasoning?: string;
 
-    // Metrics
     gap?: number;
     gapClosed?: number;
+}
+
+// ================= JSON AUDIT FILE =================
+// Complete audit trail saved as NEG-xxx_audit.json for UI consumption.
+
+export interface NegotiationAudit {
+    // Header
+    negotiationId:   string;
+    timestamp:       string;
+    outcome:         NegotiationStatus;
+    perspective:     AgentRole;
+
+    // Parties with vLEI identity
+    parties: {
+        seller: {
+            agentName:       string;
+            agentAID?:       string;
+            oorHolderName?:  string;
+            legalEntityName: string;
+            lei:             string;
+        };
+        buyer: {
+            agentName:       string;
+            agentAID?:       string;
+            oorHolderName?:  string;
+            legalEntityName: string;
+            lei:             string;
+        };
+    };
+
+    // vLEI verification events
+    vleiVerification?: {
+        sellerVerifiedBuyer?: VLEIAuditRecord;
+        buyerVerifiedSeller?: VLEIAuditRecord;
+    };
+
+    // Negotiation rounds
+    negotiation: {
+        rounds:          RoundHistory[];
+        roundsUsed:      number;
+        maxRounds:       number;
+        finalPrice?:     number;
+        quantity:        number;
+        totalDealValue?: number;
+        deliveryDate:    string;
+        paymentTerms:    string;
+    };
+
+    // Invoice & IPEX
+    invoice?: {
+        invoiceId:     string;
+        subtotal:      number;
+        tax:           number;
+        total:         number;
+        ipex?:         IPEXAuditRecord;
+    };
+
+    // Dynamic Discounting
+    dynamicDiscounting?: {
+        offered:            boolean;
+        decision?:          "AUTO_ACCEPT" | "AUTO_REJECT" | "ESCALATED_TO_CPO";
+        maxDiscountRate?:   number;
+        originalTotal?:     number;
+        discountedTotal?:   number;
+        savingAmount?:      number;
+        appliedRate?:       number;
+        settlementDate?:    string;
+        dueDate?:           string;
+        ipex?:              IPEXAuditRecord;
+        actus?: {
+            contractId:      string;
+            status:          "SUCCESS" | "FAILED";
+            error?:          string;
+        };
+    };
+
+    // Treasury ACTUS validation
+    treasury?: TreasuryConsultationSummary;
+
+    // Market data
+    marketData?: MarketAuditRecord;
 }

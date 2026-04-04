@@ -53,18 +53,10 @@
     "gleifIdentity": {
       "lei": "3358004DXAMRWRUIYJ05",
       "legalEntityName": "JUPITER KNITTING COMPANY",
-      "registryName": "JUPITER_REGISTRY",
+      "registryName": "Jupiter_Knitting_Company-oor-registry",
+      "qvi": "EB2AF-HJpzzO6IqLPQSGIcaAIhg3gOPlFCR2BQugTMKM",
       "officialRole": "ChiefFinancialOfficer",
-      "engagementRole": "Treasury Agent",
-      "qvi": "EB2AF-HJpzzO6IqLPQSGIcaAIhg3gOPlFCR2BQugTMKM"
-    },
-    "keriIdentifiers": {
-      "agentAID": "EPKQM5lB9ci8HjIOpNLMy-Q36DSwrgp2rvzoIoV7vRwZ",
-      "parentAgentAID": "EE6LzoNHkI54xuWxVQCaBT1PVIzH_Qu7BJoTZ7au8gDB",
-      "oorHolderAID": "EKtfWL0cPsuLEieZVXfTEowM2Wdm89XZxOETtF7qFbVW",
-      "legalEntityAID": "EHPEnA2KlH6uaOupj4BltLLwwFDUAj6mFqlapjv8GOjA",
-      "qviAID": "EB2AF-HJpzzO6IqLPQSGIcaAIhg3gOPlFCR2BQugTMKM",
-      "publicKey": "DFjUsr_UJHcHdRihgW2eXCZd4l6aETJ9iTo5Po0qUARi"
+      "engagementRole": "Treasury Agent"
     },
     "vLEImetadata": {
       "agentName": "JupiterTreasuryAgent",
@@ -85,7 +77,18 @@
         "GLEIF_ROOT → QVI",
         "QVI → JUPITER KNITTING COMPANY → Chief Sales Officer → jupiterSellerAgent → JupiterTreasuryAgent"
       ],
-      "timestamp": "2026-04-04T17:47:06.954Z"
+      "timestamp": "2026-04-04T17:47:06.953Z"
+    },
+    "gleifVerification": {
+      "gleifVerificationEndpoint": "https://gleif.org/api/v1/lei/3358004DXAMRWRUIYJ05"
+    },
+    "keriIdentifiers": {
+      "agentAID": "EPKQM5lB9ci8HjIOpNLMy-Q36DSwrgp2rvzoIoV7vRwZ",
+      "parentAgentAID": "EE6LzoNHkI54xuWxVQCaBT1PVIzH_Qu7BJoTZ7au8gDB",
+      "oorHolderAID": "EKtfWL0cPsuLEieZVXfTEowM2Wdm89XZxOETtF7qFbVW",
+      "legalEntityAID": "EHPEnA2KlH6uaOupj4BltLLwwFDUAj6mFqlapjv8GOjA",
+      "qviAID": "EB2AF-HJpzzO6IqLPQSGIcaAIhg3gOPlFCR2BQugTMKM",
+      "publicKey": "DFjUsr_UJHcHdRihgW2eXCZd4l6aETJ9iTo5Po0qUARi"
     }
   }
 }

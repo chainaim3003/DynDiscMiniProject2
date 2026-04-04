@@ -1,7 +1,7 @@
 {
   "name": "Tommy Buyer Agent",
   "description": "AI agent responsible for submitting, negotiating, and tracking purchase orders for TOMMY HILFIGER EUROPE B.V.",
-  "url": "http://localhost:9090",
+  "url": "https://tommy-agent.com/",
   "provider": {
     "organization": "TOMMY HILFIGER EUROPE B.V.",
     "url": "https://tommyhilfiger.com"
@@ -60,12 +60,12 @@
     "gleifIdentity": {
       "lei": "54930012QJWZMYHNJW95",
       "legalEntityName": "TOMMY HILFIGER EUROPE B.V.",
-      "registryName": "TOMMY_REGISTRY",
-      "qvi": "EP2S_kKiiLVQGVhYrhaPXSW7xsh2tNZL9wIOyTXOMJyr",
-      "officialRole": "ChiefProcurementOfficer",
-      "engagementRole": "Buyer Agent"
+      "registryName": "Tommy_Hilfiger_Europe-oor-registry",
+      "qvi": "EP2S_kKiiLVQGVhYrhaPXSW7xsh2tNZL9wIOyTXOMJyr"
     },
     "vLEImetadata": {
+      "agentName": "tommyBuyerAgent",
+      "oorHolderName": "Tommy_Chief_Procurement_Officer",
       "delegatorAID": "EPWnZX-pO0Nbb1-wdzbh0d76RuIni0g9KXlL6tPK28vQ",
       "delegateeAID": "ED_YWt1tpDFlTX-h_4ILS3QfIJbO4g5pSiH9soD1ZMg4",
       "delegatorSAID": "EOjR5deBPCmFAW-kELbtafp-9TMPHEbcystcHgT0gabp",
@@ -77,12 +77,7 @@
       "verificationPath": [
         "GLEIF_ROOT → QVI",
         "QVI → TOMMY HILFIGER EUROPE B.V. → Chief Procurement Officer → tommyBuyerAgent"
-      ],
-      "status": "verified",
-      "verificationEndpoint": "http://vlei-verification:9723/verify/agent-delegation",
-      "timestamp": "2026-04-04T18:49:57.623Z",
-      "agentName": "tommyBuyerAgent",
-      "oorHolderName": "Tommy_Chief_Procurement_Officer"
+      ]
     },
     "gleifVerification": {
       "gleifVerificationEndpoint": "https://gleif.org/api/v1/lei/54930012QJWZMYHNJW95"
