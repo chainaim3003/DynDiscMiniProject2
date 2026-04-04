@@ -44,6 +44,10 @@ import {
 
 import { LLMNegotiationClient, LLMPromptContext } from "../../shared/llm-client.js";
 import { NegotiationLogger, logInternal, suppressSDKNoise } from "../../shared/logger.js";
+import { SSEBroadcaster } from "../../shared/sse-broadcaster.js";
+
+// Module-level SSE broadcaster — shared across all requests
+const sseBroadcaster = new SSEBroadcaster("seller");
 import { computeSafeDDRate, computeLinearDiscount, addDays } from "../../shared/dd-calculator.js";
 import { ActusClient } from "../../shared/actus-client.js";
 import {
@@ -439,7 +443,7 @@ class SellerAgentExecutor implements AgentExecutor {
       await this.sendCounterOffer(state, decision.price!, decision.reasoning, logger, contextId);
       this.respond(
         bus, taskId, contextId,
-        `↓ Counter-offer sent: ₹${decision.price}/unit  (Round ${state.currentRound}/${state.maxRounds})${overrideApplied ? "  [treasury floor applied]" : ""}\nWaiting for buyer response...`
+        `↓ Counter-offer sent: ₹${decision.price}/unit${overrideApplied ? "  [treasury floor applied]" : ""}\nWaiting for buyer response...`
       );
     } else {
       state.status = "REJECTED";
@@ -598,7 +602,7 @@ class SellerAgentExecutor implements AgentExecutor {
 
     this.respond(
       bus, taskId, contextId,
-      `✓✓ Deal Closed!\n\nFinal Price    : ₹${data.acceptedPrice}/unit\nProfit         : ₹${state.profitPerUnit}/unit\nTotal Revenue  : ₹${state.totalRevenue?.toLocaleString()}\nSuccess report : ${reportPath}\nWaiting for Purchase Order...`
+      `✓✓ Deal Closed!\n\nFinal Price    : ₹${data.acceptedPrice}/unit\nProfit         : ₹${state.profitPerUnit}/unit\nTotal Revenue  : ₹${state.totalRevenue?.toLocaleString()}\nWaiting for Purchase Order...`
     );
   }
 
@@ -672,12 +676,15 @@ class SellerAgentExecutor implements AgentExecutor {
     };
 
     logger.printDDOffer(ddOfferData);
-    await this.sendToBuyer(ddOfferData, contextId);
 
     this.respond(
       bus, taskId, contextId,
       `📄 Invoice sent\n💰 DD Offer sent — max ${(safeDDRate * 100).toFixed(3)}% discount\n   Pay by ${proposedSettlementDate} → ₹${discountAtProposed.discountedAmount.toLocaleString()} (save ₹${discountAtProposed.savingAmount.toLocaleString()})\nAwaiting buyer's DD acceptance...`
     );
+
+    // 800ms delay — ensures "Invoice sent / DD Offer sent" SSE reaches UI before buyer processes DD offer
+    await new Promise(resolve => setTimeout(resolve, 800));
+    await this.sendToBuyer(ddOfferData, contextId);
   }
 
   // ================= HANDLE DD_ACCEPT =================
@@ -808,13 +815,16 @@ class SellerAgentExecutor implements AgentExecutor {
     };
 
     logger.printDDInvoice(ddInvoice);
-    await this.sendToBuyer(ddInvoice, contextId);
     state.status = "DD_COMPLETED";
 
     this.respond(
       bus, taskId, contextId,
-      `✅ DD Invoice sent!\n\nOriginal   : ₹${totalAmount.toLocaleString()}\nDiscounted : ₹${ddResult.discountedAmount.toLocaleString()}  (${(ddResult.appliedRate * 100).toFixed(3)}% off)\nSaving     : ₹${ddResult.savingAmount.toLocaleString()}\nSettle by  : ${data.chosenSettlementDate}\nACTUS      : ${actusSuccess ? "✓ Simulation complete (treasury sub-delegation)" : "⚠ " + actusError}${marketCtx ? "\n" + marketCtx : ""}\n\nWorkflow complete!`
+      `✓ DD Invoice dispatched to buyer\nSettle by : ${data.chosenSettlementDate}\nACTUS      : ${actusSuccess ? "✓ SUCCESS" : "⚠ " + actusError}`
     );
+
+    // 800ms delay — ensures "DD Invoice dispatched" SSE reaches UI before buyer's "DD Invoice received"
+    await new Promise(resolve => setTimeout(resolve, 800));
+    await this.sendToBuyer(ddInvoice, contextId);
   }
 
   // ================= HYBRID DECISION MAKING =================
@@ -1094,7 +1104,8 @@ class SellerAgentExecutor implements AgentExecutor {
     }
   }
 
-  private respond(bus: ExecutionEventBus, taskId: string, contextId: string, text: string) {
+  private respond(bus: ExecutionEventBus, taskId: string, contextId: string, text: string, skipSse = false) {
+    if (!skipSse) sseBroadcaster.broadcast(text);
     bus.publish({
       kind:      "status-update",
       taskId,
@@ -1127,6 +1138,9 @@ async function main() {
   const app = express();
   app.use(cors());
   new A2AExpressApp(handler).setupRoutes(app);
+
+  // SSE endpoint — UI subscribes here to receive live agent messages
+  app.get('/negotiate-events', (req, res) => sseBroadcaster.addClient(req, res));
 
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => {

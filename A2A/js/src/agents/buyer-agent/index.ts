@@ -42,6 +42,10 @@ import {
 import { computeLinearDiscount } from "../../shared/dd-calculator.js";
 import { LLMNegotiationClient, LLMPromptContext } from "../../shared/llm-client.js";
 import { NegotiationLogger, logInternal, suppressSDKNoise } from "../../shared/logger.js";
+import { SSEBroadcaster } from "../../shared/sse-broadcaster.js";
+
+// Module-level SSE broadcaster — shared across all requests
+const sseBroadcaster = new SSEBroadcaster("buyer");
 import {
   getMarketSnapshot,
   computeAdjustedSafetyFactor,
@@ -250,7 +254,7 @@ class BuyerAgentExecutor implements AgentExecutor {
     logger.printSuccessNotice(data.acceptedPrice, state.totalCost!, reportPath);
 
     this.respond(bus, taskId, contextId,
-      `✓✓ Deal Closed!\n\nFinal Price : ₹${data.acceptedPrice}/unit\nTotal       : ₹${state.totalCost?.toLocaleString()}\nPurchase Order sent to seller.\nSuccess report → ${reportPath}`);
+      `✓✓ Deal Closed!\n\nFinal Price : ₹${data.acceptedPrice}/unit\nTotal       : ₹${state.totalCost?.toLocaleString()}\nPurchase Order sent to seller.`);
   }
 
   // ================= HANDLE SELLER COUNTER OFFER =================
@@ -305,12 +309,12 @@ class BuyerAgentExecutor implements AgentExecutor {
       logger.printSuccessNotice(data.pricePerUnit, data.pricePerUnit * state.targetQuantity, reportPath);
 
       this.respond(bus, taskId, contextId,
-        `✓✓ Deal Closed!\n\nFinal Price : ₹${data.pricePerUnit}/unit\nTotal       : ₹${(data.pricePerUnit * state.targetQuantity).toLocaleString()}\nPurchase Order sent to seller.\nSuccess report → ${reportPath}`);
+        `✓✓ Deal Closed!\n\nFinal Price : ₹${data.pricePerUnit}/unit\nTotal       : ₹${(data.pricePerUnit * state.targetQuantity).toLocaleString()}\nPurchase Order sent to seller.`);
 
     } else if (decision.action === "COUNTER") {
       await this.sendCounterOffer(state, decision.price!, decision.reasoning, logger, contextId);
       this.respond(bus, taskId, contextId,
-        `↑ Counter-offer sent: ₹${decision.price}/unit  (Round ${state.currentRound}/${state.maxRounds})\nWaiting for seller response...`);
+        `↑ Counter-offer sent: ₹${decision.price}/unit\nWaiting for seller response...`);
     } else {
       state.status = "REJECTED";
       this.respond(bus, taskId, contextId, "✗ Offer rejected — exceeds budget");
@@ -353,6 +357,22 @@ class BuyerAgentExecutor implements AgentExecutor {
     const annPct = (annualizedDiscount * 100).toFixed(2);
     const cocPct = (coc * 100).toFixed(2);
     const maxPct = (data.maxDiscountRate * 100).toFixed(3);
+
+    // ── Broadcast DD offer to UI so buyer chat shows it ──────────────────────
+    sseBroadcaster.broadcast(
+      [
+        `💰 Dynamic Discount Offer`,
+        ``,
+        `Invoice          : ${data.invoiceId}`,
+        `Invoice date     : ${data.invoiceDate}`,
+        `Due date         : ${data.dueDate}`,
+        `Full amount      : ₹${data.originalTotal.toLocaleString()}`,
+        `Max DD rate      : ${maxPct}%`,
+        `Pay by ${data.proposedSettlementDate}  (${data.discountAtProposedDate.daysEarly} days early)`,
+        `→ ₹${data.discountAtProposedDate.discountedAmount.toLocaleString()}  (save ₹${data.discountAtProposedDate.savingAmount.toLocaleString()} @ ${(data.discountAtProposedDate.appliedRate * 100).toFixed(3)}%)`,
+        `DD OFFER RECEIVED`,
+      ].join("\n")
+    );
 
     console.log("");
     console.log(`  \x1b[36m\x1b[1m  🤖  AUTONOMOUS DD DECISION ENGINE\x1b[0m`);
@@ -414,21 +434,25 @@ class BuyerAgentExecutor implements AgentExecutor {
     };
 
     logInternal(`Auto-accepted DD — invoiceId: ${data.invoiceId}  settlement: ${optimalDate}  saving: ₹${optResult.savingAmount.toLocaleString()}`);
-    await this.sendToSeller(ddAccept, contextId);
 
-    this.respond(bus, taskId, contextId,
-      [
-        `🤖 DD AUTO-ACCEPTED`,
-        ``,
-        `  Decision basis   : Annualized discount ${annPct}% > CoC ${(BUYER_DD_CONFIG.costOfCapital * 100).toFixed(2)}%`,
-        `  Optimal date     : ${optimalDate}  (${optResult.daysEarly} days early — max saving)`,
-        `  Applied rate     : ${ratePct}%`,
-        `  Original amount  : ₹${data.originalTotal.toLocaleString()}`,
-        `  Payable          : ₹${optResult.discountedAmount.toLocaleString()}`,
-        `  Saving           : ₹${optResult.savingAmount.toLocaleString()}`,
-        ``,
-        `Awaiting discounted invoice from seller...`,
-      ].join("\n"));
+    // ── Broadcast DD AUTO-ACCEPTED to UI *before* the blocking sendToSeller so
+    //    the SSE timestamp is earlier than the DD Invoice the seller will emit.
+    const ddAcceptedText = [
+      `🤖 DD AUTO-ACCEPTED`,
+      ``,
+      `  Decision basis   : Annualized discount ${annPct}% > CoC ${(BUYER_DD_CONFIG.costOfCapital * 100).toFixed(2)}%`,
+      `  Optimal date     : ${optimalDate}  (${optResult.daysEarly} days early — max saving)`,
+      `  Applied rate     : ${ratePct}%`,
+      `  Original amount  : ₹${data.originalTotal.toLocaleString()}`,
+      `  Payable          : ₹${optResult.discountedAmount.toLocaleString()}`,
+      `  Saving           : ₹${optResult.savingAmount.toLocaleString()}`,
+      ``,
+    ].join("\n");
+    sseBroadcaster.broadcast(ddAcceptedText);        // ← timestamp recorded HERE (before ACTUS)
+
+    await this.sendToSeller(ddAccept, contextId);   // seller runs ACTUS here (5-15 s)
+
+    this.respond(bus, taskId, contextId, ddAcceptedText, true); // bus-only (SSE already sent)
   }
 
   // ── AUTO-REJECT: annualized discount below cost of capital ──────────────────
@@ -589,8 +613,11 @@ class BuyerAgentExecutor implements AgentExecutor {
 
     if (state) state.status = "DD_COMPLETED";
 
+    // Small delay so seller's "DD Invoice dispatched" SSE arrives before this "received" broadcast
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     this.respond(bus, taskId, contextId,
-      `✅ DD Invoice received!\n\nOriginal   : ₹${data.originalTotal.toLocaleString()}\nDiscounted : ₹${data.discountedTotal.toLocaleString()}  (${pct}% off)\nSaving     : ₹${data.savingAmount.toLocaleString()}\nSettle by  : ${data.settlementDate}\nACTUS      : ${actusStatus} ${data.actusSimulationStatus}\n\n🎉 End-to-end workflow complete!\nNegotiation → Invoice → Dynamic Discounting → ACTUS`);
+      `✅ DD Invoice received!\n\nOriginal   : ₹${data.originalTotal.toLocaleString()}\nDiscounted : ₹${data.discountedTotal.toLocaleString()}  (${pct}% off)\nSaving     : ₹${data.savingAmount.toLocaleString()}\nSettle by  : ${data.settlementDate}\nACTUS      : ${actusStatus} ${data.actusSimulationStatus}\n\n🎉 End-to-end workflow complete!`);
   }
 
   // ================= ESCALATE NEGOTIATION TO HUMAN =================
@@ -760,6 +787,12 @@ class BuyerAgentExecutor implements AgentExecutor {
       deliveryDate: state.deliveryDate,
     };
     logger.printPurchaseOrder(poData);
+
+    // Broadcast structured PO details to UI via SSE
+    sseBroadcaster.broadcast(
+      `📝 PURCHASE ORDER\nPO ID    : ${poData.poId}\nNeg ID   : ${poData.negotiationId}\nDate     : ${poData.orderDate.split('T')[0]}\nPrice    : ₹${poData.terms.pricePerUnit}/unit\nQty      : ${poData.terms.quantity} units\nTotal    : ₹${poData.terms.total.toLocaleString()}\nDelivery : ${poData.deliveryDate}\nPurchase Order sent`
+    );
+
     await this.sendToSeller(poData, contextId);
   }
 
@@ -796,7 +829,8 @@ class BuyerAgentExecutor implements AgentExecutor {
     }
   }
 
-  private respond(bus: ExecutionEventBus, taskId: string, contextId: string, text: string) {
+  private respond(bus: ExecutionEventBus, taskId: string, contextId: string, text: string, skipSse = false) {
+    if (!skipSse) sseBroadcaster.broadcast(text);
     bus.publish({
       kind: "status-update", taskId, contextId,
       status: {
@@ -820,6 +854,9 @@ app.use(cors());
 const executor = new BuyerAgentExecutor();
 const handler  = new DefaultRequestHandler(buyerCard, new InMemoryTaskStore(), executor);
 new A2AExpressApp(handler).setupRoutes(app);
+
+// SSE endpoint — UI subscribes here to receive live agent messages
+app.get('/negotiate-events', (req, res) => sseBroadcaster.addClient(req, res));
 
 const PORT = process.env.PORT || 9090;
 app.listen(PORT, () => {

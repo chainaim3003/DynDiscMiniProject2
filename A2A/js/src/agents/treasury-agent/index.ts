@@ -34,6 +34,7 @@ import {
 } from "@a2a-js/sdk/server";
 import { A2AExpressApp } from "@a2a-js/sdk/server/express";
 import { ActusClient } from "../../shared/actus-client.js";
+import type { ActusEvent } from "../../shared/actus-client.js";
 import {
   getMarketSnapshot,
   buildSOFRAdjustedSeries,
@@ -41,6 +42,10 @@ import {
 } from "../../shared/market-data-client.js";
 
 import { suppressSDKNoise, logInternal } from "../../shared/logger.js";
+import { SSEBroadcaster } from "../../shared/sse-broadcaster.js";
+import { computeLinearDiscount } from "../../shared/dd-calculator.js";
+
+const sseBroadcaster = new SSEBroadcaster("treasury");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -304,6 +309,7 @@ class TreasuryAgentExecutor implements AgentExecutor {
   }
 
   private respond(bus: ExecutionEventBus, taskId: string, contextId: string, text: string) {
+    sseBroadcaster.broadcast(text);
     bus.publish({
       kind: "status-update",
       taskId,
@@ -344,8 +350,36 @@ app.post("/consult", (req, res) => {
     return;
   }
 
+  // Broadcast incoming consultation request (Seller → Treasury)
+  sseBroadcaster.broadcast(
+    `📨 Seller → Treasury\nConsultation request\nNeg    : ${query.negotiationId}\nPrice  : ₹${query.pricePerUnit}/unit × ${query.quantity}\nTerms  : Net ${query.paymentTerms} days\nRound  : ${query.round}`
+  );
+
   const result = runActusSimulation(query);
   printTreasuryResult(query, result);
+
+  // Broadcast full ACTUS simulation result (Treasury → Seller)
+  const eventsText = result.actusEvents.map(e => {
+    const sign = e.cashFlow >= 0 ? '+' : '-';
+    return `  [${e.date}] ${e.eventType}  ${sign}₹${Math.abs(e.cashFlow).toLocaleString()}  balance: ₹${e.runningBalance.toLocaleString()}\n  ${e.description}`;
+  }).join('\n');
+
+  sseBroadcaster.broadcast(
+    `🏦 Treasury → Seller\n` +
+    `Neg    : ${query.negotiationId}  Round ${query.round}\n` +
+    `Price  : ₹${query.pricePerUnit}/unit × ${query.quantity}  |  Net ${query.paymentTerms}d\n` +
+    `─────────────────────────────────\n` +
+    `Liquidity    : ₹${result.availableLiquidity.toLocaleString()}\n` +
+    `Prod cost    : ₹${result.productionCost.toLocaleString()}\n` +
+    `Working cap  : ₹${result.workingCapitalCost.toLocaleString()}\n` +
+    `NPV          : ₹${result.npvOfDeal.toLocaleString()}\n` +
+    `Net profit   : ₹${result.netProfit.toLocaleString()}\n` +
+    `─────────────────────────────────\n` +
+    `${eventsText}\n` +
+    `─────────────────────────────────\n` +
+    `Verdict : ${result.approved ? "APPROVED ✓" : "REJECTED ✗"}\n` +
+    `${result.recommendation}`
+  );
 
   res.json(result);
 });
@@ -412,6 +446,26 @@ app.post("/validate-dd", (req, res) => {
     ],
   });
 });
+
+// ── In-memory store of completed DD ACTUS contracts ──────────────────────────
+interface ActusContractRecord {
+  invoiceId:       string;
+  negotiationId:   string;
+  invoiceDate:     string;
+  dueDate:         string;
+  settlementDate:  string;
+  notionalAmount:  number;
+  maxDiscountRate: number;
+  appliedRate:     number;
+  discountedAmount: number;
+  savingAmount:    number;
+  sofrRate:        number;
+  hurdleRate:      number;
+  actusSuccess:    boolean;
+  events:          ActusEvent[];
+  createdAt:       string;
+}
+const actusContractStore: ActusContractRecord[] = [];
 
 // ── DD Cashflow Schedule endpoint (sub-delegation from seller on DD_ACCEPT) ───────
 // Seller delegates ACTUS cashflow computation to treasury.
@@ -481,6 +535,34 @@ app.post("/dd-cashflow-schedule", async (req, res) => {
     console.log(`  ${C.dim}  ─────────────────────────────────────────────────────────${C.reset}`);
     console.log("");
 
+    // Broadcast ACTUS result to UI
+    sseBroadcaster.broadcast(
+      `🏦 Treasury → Seller\nACTUS DD Cashflow\nInvoice    : ${invoiceId}\nSettlement : ${settlementDate}\nSOFR       : ${(market.sofrRate * 100).toFixed(2)}%\nHurdle     : ${(adjustedHurdle * 100).toFixed(2)}%\nACTUS      : ${actusResult.success ? "✓ SUCCESS" : "⚠ " + actusResult.error}`
+    );
+
+    // Store contract record for UI retrieval
+    const ddResult = computeLinearDiscount(
+      Number(notionalAmount), Number(maxDiscountRate),
+      invoiceDate, dueDate, settlementDate
+    );
+    actusContractStore.push({
+      invoiceId,
+      negotiationId,
+      invoiceDate,
+      dueDate,
+      settlementDate,
+      notionalAmount:   Number(notionalAmount),
+      maxDiscountRate:  Number(maxDiscountRate),
+      appliedRate:      ddResult.appliedRate,
+      discountedAmount: ddResult.discountedAmount,
+      savingAmount:     ddResult.savingAmount,
+      sofrRate:         market.sofrRate,
+      hurdleRate:       adjustedHurdle,
+      actusSuccess:     actusResult.success,
+      events:           actusResult.events ?? [],
+      createdAt:        new Date().toISOString(),
+    });
+
     res.json({
       success:         actusResult.success,
       events:          actusResult.events ?? [],
@@ -502,6 +584,12 @@ app.post("/dd-cashflow-schedule", async (req, res) => {
   }
 });
 
+// ── ACTUS Contracts endpoint — UI fetches completed DD contracts ──────────────
+app.get("/actus-contracts", (_req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.json(actusContractStore);
+});
+
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => {
   res.json({
@@ -517,6 +605,9 @@ app.get("/health", (_req, res) => {
 const executor = new TreasuryAgentExecutor();
 const handler  = new DefaultRequestHandler(treasuryCard, new InMemoryTaskStore(), executor);
 new A2AExpressApp(handler).setupRoutes(app);
+
+// SSE endpoint — UI subscribes here to receive live treasury messages
+app.get('/negotiate-events', (req, res) => sseBroadcaster.addClient(req, res));
 
 const PORT = process.env.PORT || 7070;
 app.listen(PORT, () => {
