@@ -77,10 +77,131 @@ async function runVerification(agentName, oorHolderName, scriptType = 'DEEP') {
 }
 
 // ============================================
-// Health check
+// IPEX STATUS endpoint — reads task-data files for grant/admit info
 // ============================================
+app.get('/api/ipex-status', (req, res) => {
+  try {
+    const td = path.join(VLEI_DIR, 'task-data');
+    const read = (f) => { try { return JSON.parse(fs.readFileSync(path.join(td, f), 'utf8')); } catch { return null; } };
+
+    const grant   = read('jupiterSellerAgent-ipex-grant-info.json');
+    const admit   = read('tommyBuyerAgent-ipex-admit-info.json');
+    const credInfo = read('jupiterSellerAgent-self-invoice-credential-info.json');
+
+    res.json({
+      grant: grant ? {
+        from:           grant.sender,
+        fromAID:        grant.senderAID,
+        to:             grant.receiver,
+        toAID:          grant.receiverAID,
+        grantSAID:      grant.grantResult?.said,
+        credentialSAID: grant.credentialSAID,
+        invoiceNumber:  grant.invoiceNumber,
+        amount:         grant.amount,
+        currency:       grant.currency,
+        timestamp:      grant.timestamp,
+        selfAttested:   credInfo?.selfAttested ?? true,
+        sellerLEI:      grant.credential?.sad?.a?.sellerLEI,
+        buyerLEI:       grant.credential?.sad?.a?.buyerLEI,
+      } : null,
+      admit: admit ? {
+        from:           admit.sender,
+        fromAID:        admit.senderAID,
+        to:             admit.receiver,
+        toAID:          admit.receiverAID,
+        grantSAID:      admit.grantSAID,
+        credentialSAID: admit.credentialSAID,
+        admitSuccess:   admit.admitSuccess,
+        invoiceNumber:  admit.invoiceNumber,
+        amount:         admit.amount,
+        currency:       admit.currency,
+        timestamp:      admit.timestamp,
+      } : null,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), message: 'vLEI Verification & IPEX API Server is running' });
+});
+
+// ============================================
+// STATUS endpoint — reads task-data files, no re-running scripts
+// Returns already-verified state from completed vLEI workflow
+// ============================================
+app.get('/api/status', (req, res) => {
+  try {
+    const td = path.join(VLEI_DIR, 'task-data');
+    const read = (f) => { try { return JSON.parse(fs.readFileSync(path.join(td, f), 'utf8')); } catch { return null; } };
+
+    const sellerInfo    = read('jupiterSellerAgent-info.json');
+    const buyerInfo     = read('tommyBuyerAgent-info.json');
+    const sellerDelInfo = read('jupiterSellerAgent-delegate-info.json');
+    const buyerDelInfo  = read('tommyBuyerAgent-delegate-info.json');
+    const sellerOOR     = read('Jupiter_Chief_Sales_Officer-info.json');
+    const buyerOOR      = read('Tommy_Chief_Procurement_Officer-info.json');
+    const ipexGrant     = read('jupiterSellerAgent-ipex-grant-info.json');
+    const treasuryInfo  = read('JupiterTreasuryAgent-info.json');
+
+    const sellerVerified = !!(
+      sellerInfo?.state?.et === 'dip' &&
+      sellerInfo?.state?.di &&
+      sellerInfo.state.di === sellerOOR?.aid &&
+      sellerDelInfo?.aid
+    );
+
+    const buyerVerified = !!(
+      buyerInfo?.state?.et === 'dip' &&
+      buyerInfo?.state?.di &&
+      buyerInfo.state.di === buyerOOR?.aid &&
+      buyerDelInfo?.aid
+    );
+
+    res.json({
+      seller: {
+        verified:    sellerVerified,
+        agentAID:    sellerInfo?.aid,
+        oorHolderAID: sellerOOR?.aid,
+        diMatch:     sellerInfo?.state?.di === sellerOOR?.aid,
+        eventType:   sellerInfo?.state?.et,
+        publicKey:   sellerInfo?.state?.k?.[0],
+        hasUniqueBran: sellerInfo?.hasUniqueBran,
+        steps: {
+          step1_aidsLoaded:      !!sellerInfo?.aid && !!sellerOOR?.aid,
+          step2_delegationField: sellerInfo?.state?.di === sellerOOR?.aid,
+          step3_delegationSeal:  !!sellerDelInfo?.icpOpName,
+          step4_cryptoProof:     sellerInfo?.state?.et === 'dip',
+          step5_publicKey:       !!sellerInfo?.state?.k?.[0],
+        },
+      },
+      buyer: {
+        verified:    buyerVerified,
+        agentAID:    buyerInfo?.aid,
+        oorHolderAID: buyerOOR?.aid,
+        diMatch:     buyerInfo?.state?.di === buyerOOR?.aid,
+        eventType:   buyerInfo?.state?.et,
+        publicKey:   buyerInfo?.state?.k?.[0],
+        hasUniqueBran: buyerInfo?.hasUniqueBran,
+        steps: {
+          step1_aidsLoaded:      !!buyerInfo?.aid && !!buyerOOR?.aid,
+          step2_delegationField: buyerInfo?.state?.di === buyerOOR?.aid,
+          step3_delegationSeal:  !!buyerDelInfo?.icpOpName,
+          step4_cryptoProof:     buyerInfo?.state?.et === 'dip',
+          step5_publicKey:       !!buyerInfo?.state?.k?.[0],
+        },
+      },
+      treasury: {
+        verified: !!treasuryInfo?.aid,
+        agentAID: treasuryInfo?.aid,
+      },
+      ipexGrant: !!ipexGrant,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ============================================

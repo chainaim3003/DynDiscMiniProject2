@@ -62,6 +62,7 @@ export function ContractManagement({ simulation }: ContractManagementProps) {
   const [actusContracts, setActusContracts] = useState<ActusContractRecord[]>(loadHistory);
   const [selectedActus, setSelectedActus] = useState<ActusContractRecord | null>(null);
   const [actusFetching, setActusFetching] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(5);
 
   const fetchActusContracts = async () => {
     setActusFetching(true);
@@ -201,7 +202,7 @@ export function ContractManagement({ simulation }: ContractManagementProps) {
   const handleCreateContract = () => {
     const id = `C${String(contracts.length + 1).padStart(3, '0')}`;
     const startDate = new Date().toISOString().split('T')[0];
-    const riskScore = Math.floor(Math.random() * 60) + 5;
+    const riskScore = 0; // Real risk score comes from ACTUS simulation via treasury agent
 
     let contract: Contract;
     if (newContract.type === 'PAM') {
@@ -284,7 +285,7 @@ export function ContractManagement({ simulation }: ContractManagementProps) {
                 <span className="text-xs text-muted-foreground">{actusContracts.length} total</span>
               </div>
               <div className="space-y-2">
-                {actusContracts.map((c) => (
+                {actusContracts.slice(0, visibleCount).map((c) => (
                   <div
                     key={c.invoiceId}
                     onClick={() => setSelectedActus(c)}
@@ -314,6 +315,22 @@ export function ContractManagement({ simulation }: ContractManagementProps) {
                   </div>
                 ))}
               </div>
+              {actusContracts.length > visibleCount && (
+                <button
+                  onClick={() => setVisibleCount(v => v + 5)}
+                  className="mt-3 w-full text-xs text-agent-treasury hover:text-agent-treasury/80 py-2 border border-agent-treasury/20 rounded-lg hover:bg-agent-treasury/5 transition-colors"
+                >
+                  View More ({actusContracts.length - visibleCount} remaining)
+                </button>
+              )}
+              {visibleCount > 5 && (
+                <button
+                  onClick={() => setVisibleCount(5)}
+                  className="mt-1 w-full text-xs text-muted-foreground hover:text-foreground py-1 transition-colors"
+                >
+                  Show Less
+                </button>
+              )}
             </div>
 
             {/* Contract detail */}

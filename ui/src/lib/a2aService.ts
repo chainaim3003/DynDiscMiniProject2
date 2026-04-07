@@ -222,6 +222,113 @@ export function subscribeToTreasuryEvents(onMsg: MsgListener): () => void {
   };
 }
 
+// ── Verify agent via legentvLEI api-server (port 4000) ───────────────────────
+// NOTE: api-server runs in WSL. If localhost:4000 doesn't work,
+// set VITE_VLEI_API_URL in ui/.env to your WSL IP e.g. http://172.x.x.x:4000
+const VLEI_API_URL = (import.meta as any).env?.VITE_VLEI_API_URL || 'http://localhost:4000';
+
+export interface VerificationResult {
+  success: boolean;
+  error?: string;
+  output?: string;
+  verificationType?: string;
+  timestamp?: string;
+  agent?: string;
+  oorHolder?: string;
+  validation?: {
+    delegationChain?: {
+      verified?: boolean;
+      agentAID?: string;
+      delegatorAID?: string;
+      oorHolderAID?: string;
+      match?: boolean;
+    };
+    kelVerification?: {
+      agentKEL?: { verified?: boolean; exists?: boolean };
+      oorHolderKEL?: { verified?: boolean; exists?: boolean };
+    };
+    credentialStatus?: {
+      revoked?: boolean;
+      expired?: boolean;
+    };
+  };
+}
+
+/**
+ * Calls /api/status — reads already-verified task-data files.
+ * No re-running of scripts. Returns instantly from completed vLEI workflow.
+ */
+export async function verifyAgent(
+  caller: 'buyer' | 'seller',
+  target: 'seller' | 'buyer'
+): Promise<VerificationResult> {
+  try {
+    const res = await fetch(`${VLEI_API_URL}/api/status`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json() as any;
+    const agentData = data[target]; // 'seller' or 'buyer'
+    if (!agentData) throw new Error('No data for ' + target);
+    return {
+      success: agentData.verified === true,
+      agent:   target === 'seller' ? 'jupiterSellerAgent' : 'tommyBuyerAgent',
+      oorHolder: target === 'seller' ? 'Jupiter_Chief_Sales_Officer' : 'Tommy_Chief_Procurement_Officer',
+      timestamp: data.timestamp,
+      // Pack step results into output string so GleifPipeline can parse them
+      output: agentData.verified ? [
+        agentData.steps?.step1_aidsLoaded      ? '✓ Step 1: AIDs loaded from info files' : '',
+        agentData.steps?.step2_delegationField ? '✓ Step 2: Delegation field (di) verified' : '',
+        agentData.steps?.step3_delegationSeal  ? '✓ Step 3: Delegation seal found/confirmed' : '',
+        agentData.steps?.step4_cryptoProof     ? '✅ CRYPTOGRAPHIC VERIFICATION PASSED!' : '',
+        agentData.steps?.step5_publicKey       ? '✅ Public key found in agent info file' : '',
+        'Delegation is CRYPTOGRAPHICALLY VERIFIED.',
+      ].join('\n') : '',
+      error: agentData.verified ? undefined : `Agent ${target} not verified in task-data`,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Could not reach vLEI api-server on port 4000' };
+  }
+}
+
+// ── Fetch real agent card from live agent server ──────────────────────────────
+export interface AgentCardData {
+  name: string;
+  description?: string;
+  url?: string;
+  provider?: { organization?: string; url?: string };
+  version?: string;
+  capabilities?: Record<string, unknown>;
+  skills?: Array<{ id: string; name: string; description?: string; tags?: string[] }>;
+  extensions?: {
+    gleifIdentity?: {
+      lei?: string;
+      legalEntityName?: string;
+      officialRole?: string;
+      engagementRole?: string;
+    };
+    vLEImetadata?: {
+      verificationPath?: string[];
+      status?: string;
+      timestamp?: string;
+    };
+    keriIdentifiers?: {
+      agentAID?: string;
+      oorHolderAID?: string;
+      legalEntityAID?: string;
+    };
+  };
+}
+
+export async function fetchAgentCard(agentType: 'buyer' | 'seller' | 'treasury'): Promise<AgentCardData | null> {
+  const url = agentType === 'buyer' ? BUYER_AGENT_URL : agentType === 'treasury' ? TREASURY_AGENT_URL : SELLER_AGENT_URL;
+  try {
+    const res = await fetch(`${url}/.well-known/agent-card.json`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json() as AgentCardData;
+  } catch {
+    return null;
+  }
+}
+
 // ── Send initial negotiation command ─────────────────────────────────────────
 export async function sendToBuyerAgent(
   userText: string,

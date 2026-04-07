@@ -1,73 +1,94 @@
 # AgentFlow UI
 
-Procurement AI dashboard — real-time interface for the A2A multi-agent negotiation system.
+React + Vite frontend for the A2A Negotiation & vLEI verification system.
 
-## Overview
+## Prerequisites
 
-This UI connects to three live backend agents and displays real negotiation, treasury, and ACTUS cashflow data. No mock data is used once the agents are running.
+All backend services must be running before starting the UI.
 
-## Pages
+---
 
-### Dashboard (`/`)
-- Agent status cards — Buyer, Seller, Seller's Treasury (live status from SSE streams)
-- Net Cash Flow chart — real ACTUS PAM cashflow events (IED outflow + MD inflow) from treasury agent
-- Contract Summary — real PAM contract count, total notional, total savings
-- Risk Alerts — failed ACTUS simulations + liquidity below safety threshold
-- Cash Position — real `currentBalance`, `availableLiquidity`, `safetyThreshold` from `GET /health`
-- Recent Activity — real DD contracts sorted by creation time
+## Step 1 — Start vLEI Infrastructure (WSL)
 
-### Agents (`/agents`)
-- Buyer and Seller chat panels — live SSE streams from buyer (:9090) and seller (:8080) agents
-- Treasury Chat — live SSE stream from treasury agent (:7070), shows Seller→Treasury consultations and ACTUS verdicts
-- Negotiation flow tracker — real-time round tracking, PO, invoice, DD offer, DD invoice steps
-- Agent verification and fetch flows
+```bash
+cd /mnt/c/Users/WELCOME/Documents/chainaim/mcp\ server/DynDiscMiniProject2/legentvLEI
 
-### Treasury Management (`/contracts`)
-- ACTUS DD Cashflow Contracts — fetched from `GET http://localhost:7070/actus-contracts`
-- Persisted in localStorage as history across page refreshes
-- Amortization schedule table — real ACTUS PAM cashflow events (IED, IP, MD) with payoff and nominal value
-- Download All Contracts — exports real ACTUS contract JSON
-- Clear History — removes localStorage cache
+# First time only — run the full vLEI workflow
+./stop.sh
+./setup.sh
+./deploy.sh
+./saidify-and-restart.sh
+./run-all-buyerseller-4D-with-subdelegation.sh
+./DEEP-EXT-subagent.sh JupiterTreasuryAgent jupiterSellerAgent
+```
 
-### Risk & Analytics (`/risk`)
-- All data from `GET http://localhost:7070/actus-contracts` + localStorage history
-- Probability of Default Scoring — derived from hurdle rate vs applied discount rate gap
-- Liquidity Analysis — real ACTUS cashflow events plotted as inflow/outflow/balance
-- Discount Rate Analysis — max DD rate vs applied rate vs hurdle per invoice
-- Working Capital Metrics — DSO/DPO/CCC from real settlement and due dates
-- Contract Portfolio donut — PAM(AR) / PAM(AP) / ANN(AR) / ANN(AP)
-- Savings per Invoice bar chart
-- Risk Summary — low/medium/high based on PD scores
-- Drag & drop upload — import exported ACTUS contract JSON to populate analytics
+## Step 2 — Start vLEI API Server (WSL)
 
-## Backend Dependencies
+```bash
+cd /mnt/c/Users/WELCOME/Documents/chainaim/mcp\ server/DynDiscMiniProject2/legentvLEI/api-server
+node server.js
+# Runs on http://localhost:4000
+```
 
-| Agent | Port | Key Endpoints |
+## Step 3 — Start A2A Agents (Windows — 3 terminals)
+
+```powershell
+cd "C:\Users\WELCOME\Documents\chainaim\mcp server\DynDiscMiniProject2\A2A\js"
+
+# Terminal 1 — Treasury Agent (port 7070)
+npm run agents:treasury
+
+# Terminal 2 — Seller Agent (port 8080)
+npm run agents:seller
+
+# Terminal 3 — Buyer Agent (port 9090)
+npm run agents:buyer
+```
+
+## Step 4 — Start the UI
+
+```powershell
+cd "C:\Users\WELCOME\Documents\chainaim\mcp server\DynDiscMiniProject2\ui"
+npm run dev
+# Opens at http://localhost:5173
+```
+
+---
+
+## Service Ports
+
+| Service | Port | Purpose |
 |---|---|---|
-| Buyer Agent | 9090 | `GET /negotiate-events` (SSE), `POST /` (A2A) |
-| Seller Agent | 8080 | `GET /negotiate-events` (SSE), `POST /` (A2A) |
-| Treasury Agent | 7070 | `GET /negotiate-events` (SSE), `POST /consult`, `POST /dd-cashflow-schedule`, `GET /actus-contracts`, `GET /health` |
+| vLEI API Server | 4000 | Agent verification, IPEX status |
+| Seller Agent | 8080 | Negotiation, invoice, DD |
+| Buyer Agent | 9090 | Negotiation, PO, DD accept |
+| Treasury Agent | 7070 | ACTUS simulation, cash flow |
+| UI | 5173 | Frontend |
 
-## Running the UI
+---
 
-```sh
-# Install dep
-This project is built with:
+## Usage Flow in UI
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Go to **Agents** tab
+2. In Buyer Chat: type `fetch seller agent` — fetches agent card from :8080
+3. Type `verify agent` — verifies seller vLEI delegation via :4000 (needs vLEI running)
+4. After verification passes: type `start negotiation 300` (or any opening price)
+5. Watch negotiation, treasury consultation, invoice, IPEX grant/admit, and DD flow
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Data Sources
 
-## Can I connect a custom domain to my Lovable project?
+All data is real — no mock data:
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+| UI Section | Data Source |
+|---|---|
+| Agent cards | `:8080` / `:9090` / `:7070` live agents |
+| vLEI verification pipeline | `:4000/api/status` → task-data files |
+| IPEX grant / admit | `:4000/api/ipex-status` → task-data files |
+| Treasury verification | `:4000/api/status` + `:7070` agent card |
+| Negotiation chat | SSE streams from `:8080` and `:9090` |
+| Treasury chat | SSE stream from `:7070` |
+| Dashboard cash flow | `:7070/actus-contracts` |
+| Contract Management | `:7070/actus-contracts` |
+| Risk & Analytics | `:7070/actus-contracts` |

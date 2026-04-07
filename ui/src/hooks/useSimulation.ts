@@ -4,15 +4,10 @@ import {
   AgentAction, 
   AgentMessage, 
   createInitialAgentState,
-  generateBuyerAction,
-  generateSellerAction,
-  generateTreasuryAction,
   AgentType,
   Transaction,
-  createDemoTransaction,
 } from '@/lib/agents';
 import { Contract, calculateNetCashFlow, CashFlowEntry } from '@/lib/calculations';
-import { sampleContracts } from '@/lib/sampleData';
 
 export interface SimulationState {
   isRunning: boolean;
@@ -32,11 +27,11 @@ export function useSimulation() {
     speed: 1,
     projectionWeeks: 24,
     agents: createInitialAgentState(),
-    contracts: sampleContracts, // Start with sample contracts
+    contracts: [],           // no fake contracts — real ones come from treasury agent
     actions: [],
     messages: [],
-    transactions: [createDemoTransaction()],
-    cashFlows: calculateNetCashFlow(sampleContracts, 24, '2025-01-01'),
+    transactions: [],        // no fake demo transaction
+    cashFlows: calculateNetCashFlow([], 24),
   }));
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -46,81 +41,6 @@ export function useSimulation() {
     stateRef.current = state;
   }, [state]);
 
-  const triggerAgentAction = useCallback(() => {
-    setState(prev => {
-      // Randomly select an agent
-      const agentTypes: AgentType[] = ['buyer', 'seller', 'treasury'];
-      const activeAgent = agentTypes[Math.floor(Math.random() * agentTypes.length)];
-      
-      let result;
-      switch (activeAgent) {
-        case 'buyer':
-          result = generateBuyerAction(prev.contracts);
-          break;
-        case 'seller':
-          result = generateSellerAction(prev.contracts);
-          break;
-        case 'treasury':
-          result = generateTreasuryAction(prev.contracts, prev.cashFlows);
-          break;
-      }
-
-      const newActions = [result.action, ...prev.actions].slice(0, 100);
-      const newMessages = result.message 
-        ? [result.message, ...prev.messages].slice(0, 50)
-        : prev.messages;
-
-      // Update agent state
-      const newAgents = { ...prev.agents };
-      
-      if (activeAgent === 'treasury') {
-        // Update both treasury agents
-        newAgents.buyerTreasury = {
-          ...newAgents.buyerTreasury,
-          status: 'active',
-          lastAction: result.action,
-          totalActions: newAgents.buyerTreasury.totalActions + 1,
-          objective: `Processing: ${result.action.action.slice(0, 30)}...`,
-        };
-        newAgents.sellerTreasury = {
-          ...newAgents.sellerTreasury,
-          status: 'active',
-          lastAction: result.action,
-          totalActions: newAgents.sellerTreasury.totalActions + 1,
-          objective: `Processing: ${result.action.action.slice(0, 30)}...`,
-        };
-      } else {
-        newAgents[activeAgent] = {
-          ...newAgents[activeAgent],
-          status: 'active',
-          lastAction: result.action,
-          totalActions: newAgents[activeAgent].totalActions + 1,
-          objective: `Processing: ${result.action.action.slice(0, 30)}...`,
-        };
-      }
-
-      // Set other agents back to idle after a short delay
-      agentTypes.filter(a => a !== activeAgent).forEach(a => {
-        if (a === 'treasury') {
-          if (newAgents.buyerTreasury.status === 'active') {
-            newAgents.buyerTreasury = { ...newAgents.buyerTreasury, status: 'idle' };
-          }
-          if (newAgents.sellerTreasury.status === 'active') {
-            newAgents.sellerTreasury = { ...newAgents.sellerTreasury, status: 'idle' };
-          }
-        } else if (newAgents[a].status === 'active') {
-          newAgents[a] = { ...newAgents[a], status: 'idle' };
-        }
-      });
-
-      return {
-        ...prev,
-        agents: newAgents,
-        actions: newActions,
-        messages: newMessages,
-      };
-    });
-  }, []);
 
   const triggerTransactionEvent = useCallback(() => {
     setState(prev => {
@@ -366,41 +286,32 @@ export function useSimulation() {
   }, []);
 
   const resetSimulation = useCallback(() => {
-    const initial: SimulationState = {
+    setState({
       isRunning: false,
       speed: 1,
       projectionWeeks: 24,
       agents: createInitialAgentState(),
-      contracts: [], // Reset to empty contracts
+      contracts: [],
       actions: [],
       messages: [],
-      transactions: [createDemoTransaction()],
-      cashFlows: calculateNetCashFlow([], 24, '2025-01-01'),
-    };
-
-    setState(initial);
+      transactions: [],
+      cashFlows: calculateNetCashFlow([], 24),
+    });
   }, []);
 
-  // Simulation loop
+  // Simulation loop — only runs if manually started, no auto-fake actions
   useEffect(() => {
-    if (state.isRunning) {
-      const interval = 3000 / state.speed; // Base 3 seconds, adjusted by speed
-      intervalRef.current = setInterval(() => {
-        const hasOpenTransaction = (stateRef.current?.transactions || []).some(t => t.status === 'open');
-        if (hasOpenTransaction) {
-          triggerTransactionEvent();
-        } else {
-          triggerAgentAction();
-        }
-      }, interval);
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+    if (!state.isRunning) return;
+    const interval = 3000 / state.speed;
+    intervalRef.current = setInterval(() => {
+      const hasOpenTransaction = (stateRef.current?.transactions || []).some(t => t.status === 'open');
+      if (hasOpenTransaction) {
+        triggerTransactionEvent();
       }
-    };
-  }, [state.isRunning, state.speed, triggerAgentAction, triggerTransactionEvent]);
+      // No random fake agent actions — real events come from SSE streams
+    }, interval);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [state.isRunning, state.speed, triggerTransactionEvent]);
 
   return {
     state,
@@ -412,7 +323,6 @@ export function useSimulation() {
     removeContract,
     updateAgentStatus,
     resetSimulation,
-    triggerAgentAction,
     triggerTransactionEvent,
     setProjectionWeeks,
   };

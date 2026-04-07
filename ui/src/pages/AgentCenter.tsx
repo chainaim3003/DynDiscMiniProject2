@@ -9,14 +9,14 @@ import { StatusIndicator } from '@/components/StatusIndicator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { Pause, Play, Settings, Send, MessageSquare, X, Radio, Circle } from 'lucide-react';
+import { Pause, Play, Settings, Send, MessageSquare, X, Radio, Circle, ShoppingBag, Factory } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { sendToBuyerAgent, subscribeToNegotiationEvents, subscribeToSellerEvents, subscribeToTreasuryEvents, parseNegotiationUpdate, resetSession, NegotiationMessage, classifyMessage, parseDDOffer, ParsedDDOffer } from '@/lib/a2aService';
+import { sendToBuyerAgent, subscribeToNegotiationEvents, subscribeToSellerEvents, subscribeToTreasuryEvents, parseNegotiationUpdate, resetSession, NegotiationMessage, classifyMessage, parseDDOffer, ParsedDDOffer, fetchAgentCard, AgentCardData, verifyAgent } from '@/lib/a2aService';
 import { DynamicDiscountOffer } from '@/components/DynamicDiscountOffer';
 import { AgentType } from '@/lib/agents';
 
@@ -102,7 +102,7 @@ function ChatBubbleEntry({ entry, perspective }: { entry: ChatEntry; perspective
     const mine = perspective === 'buyer';
     return (
       <div className={cn('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
-        {!mine && <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-[10px] text-white">B</div>}
+        {!mine && <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-sm">???</div>}
         <div className="max-w-[85%] min-w-0">
           <div className="flex items-center gap-1 mb-0.5 opacity-60">
             <span className="text-[10px] font-medium text-agent-buyer">Buyer</span>
@@ -120,7 +120,7 @@ function ChatBubbleEntry({ entry, perspective }: { entry: ChatEntry; perspective
             </div>
           </div>
         </div>
-        {mine && <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-[10px] text-white">B</div>}
+        {mine && <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-sm">???</div>}
       </div>
     );
   }
@@ -140,7 +140,7 @@ function ChatBubbleEntry({ entry, perspective }: { entry: ChatEntry; perspective
       const actusMatch  = entry.text.match(/ACTUS\s*:\s*(.+)/m);
       return (
         <div className={cn('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
-          {!mine && <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 text-[10px] text-white">S</div>}
+          {!mine && <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0 text-sm">??</div>}
           <div className="max-w-[90%] min-w-0">
             <div className="flex items-center gap-1 mb-0.5 opacity-60">
               <span className="text-[10px] font-medium text-agent-seller">Seller</span>
@@ -161,13 +161,13 @@ function ChatBubbleEntry({ entry, perspective }: { entry: ChatEntry; perspective
               </div>
             </div>
           </div>
-          {mine && <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 text-[10px] text-white">S</div>}
+          {mine && <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0 text-sm">??</div>}
         </div>
       );
     }
     return (
       <div className={cn('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
-        {!mine && <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 text-[10px] text-white">S</div>}
+        {!mine && <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0 text-sm">??</div>}
         <div className="max-w-[85%] min-w-0">
           <div className="flex items-center gap-1 mb-0.5 opacity-60">
             <span className="text-[10px] font-medium text-agent-seller">Seller</span>
@@ -190,7 +190,7 @@ function ChatBubbleEntry({ entry, perspective }: { entry: ChatEntry; perspective
             </div>
           </div>
         </div>
-        {mine && <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 text-[10px] text-white">S</div>}
+        {mine && <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0 text-sm">??</div>}
       </div>
     );
   }
@@ -325,6 +325,88 @@ function ChatBubbleEntry({ entry, perspective }: { entry: ChatEntry; perspective
   );
 }
 
+// ── GLEIF Verification Pipeline component ────────────────────────────────────
+function GleifPipeline({
+  verifyingTarget,
+  result,
+}: {
+  verifyingTarget: 'buyer' | 'seller';
+  result: import('@/lib/a2aService').VerificationResult | null;
+}) {
+  const finalOk = result?.success ?? false;
+  const output  = result?.output ?? '';
+
+  const step1ok = finalOk && (output.includes('Step 1: AIDs loaded') || output.includes('[Step 1]') || output.includes('Fetching Agent and OOR AIDs'));
+  const step2ok = finalOk && (output.includes('Step 2: Delegation field') || output.includes('[Step 2]') || output.includes('Delegation field verified'));
+  const step3ok = finalOk && (output.includes('Step 3: Delegation seal') || output.includes('[Step 3]') || output.includes('DELEGATION VERIFIED'));
+  const step4ok = finalOk && (output.includes('Step 4: Seal digest') || output.includes('[Step 4]') || output.includes('CRYPTOGRAPHIC VERIFICATION PASSED'));
+  const step5ok = finalOk && (output.includes('Step 5: Public key') || output.includes('[Step 5]') || output.includes('Public key found'));
+
+  const nodes = [
+    { icon: '🛡️', title: 'GLEIF Root → QVI',   desc: 'Root of trust for vLEI ecosystem',                                                          ok: finalOk  },
+    { icon: '🏢', title: 'Legal Entity',         desc: verifyingTarget === 'seller' ? 'Jupiter Knitting Company' : 'Tommy Hilfiger Europe B.V.',    ok: step1ok  },
+    { icon: '👔', title: 'OOR Holder',           desc: verifyingTarget === 'seller' ? 'Chief Sales Officer' : 'Chief Procurement Officer',          ok: step2ok  },
+    { icon: '🔗', title: 'Delegation Seal',      desc: 'KEL seal anchored in OOR holder',                                                           ok: step3ok  },
+    { icon: '🔐', title: 'Cryptographic Proof',  desc: 'Seal digest matches agent inception SAID',                                                  ok: step4ok  },
+    { icon: '🤖', title: verifyingTarget === 'seller' ? 'Seller Agent Card' : 'Buyer Agent Card', desc: 'Public key available for signature verification', ok: step5ok },
+    { icon: '✅', title: 'Verified',             desc: 'Delegation is CRYPTOGRAPHICALLY VERIFIED',                                                  ok: finalOk  },
+  ];
+
+  // Sequential reveal — one node every 400ms after result arrives
+  const [visibleCount, setVisibleCount] = React.useState(0);
+
+  React.useEffect(() => {
+    if (result === null) { setVisibleCount(0); return; }
+    setVisibleCount(0);
+    let i = 0;
+    const interval = setInterval(() => {
+      i += 1;
+      setVisibleCount(i);
+      if (i >= nodes.length) clearInterval(interval);
+    }, 400);
+    return () => clearInterval(interval);
+  }, [result]);
+
+  return (
+    <div className="flex flex-col gap-0">
+      {nodes.map((node, i) => {
+        const isFinal   = i === nodes.length - 1;
+        const revealed  = i < visibleCount;
+        const isOk      = revealed && node.ok;
+        return (
+          <div key={i} className="flex flex-col items-start">
+            <div className={cn(
+              'flex items-center gap-3 w-full rounded-lg px-3 py-2 border transition-all duration-500',
+              !revealed   ? 'border-border/30 bg-muted/10 opacity-40' :
+              isOk && isFinal ? 'border-green-500/60 bg-green-900/20' :
+              isOk        ? 'border-green-500/40 bg-green-900/10' :
+                            'border-red-500/40 bg-red-900/10 opacity-70'
+            )}>
+              <div className={cn(
+                'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold transition-all duration-500',
+                !revealed ? 'bg-muted' : isOk ? 'bg-green-500' : 'bg-red-500'
+              )}>
+                {!revealed ? '?' : isOk ? '✓' : '✗'}
+              </div>
+              <span className="text-base">{node.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className={cn('text-xs font-semibold', revealed ? 'text-foreground' : 'text-muted-foreground')}>{node.title}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{node.desc}</p>
+              </div>
+            </div>
+            {!isFinal && (
+              <div className={cn(
+                'w-0.5 h-3 ml-5 transition-all duration-500',
+                isOk ? 'bg-green-500' : 'bg-border/30'
+              )} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AgentCenter({ simulation }: AgentCenterProps) {
   const { agents, actions, messages } = simulation.state;
 
@@ -352,8 +434,13 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
   
   const [buyerVerificationStep, setBuyerVerificationStep] = useState(0);
   const [sellerVerificationStep, setSellerVerificationStep] = useState(0);
+  const [buyerVerificationResult, setBuyerVerificationResult] = useState<import('@/lib/a2aService').VerificationResult | null>(null);
+  const [sellerVerificationResult, setSellerVerificationResult] = useState<import('@/lib/a2aService').VerificationResult | null>(null);
+  const [buyerPipelineVisible, setBuyerPipelineVisible] = useState(false);
+  const [sellerPipelineVisible, setSellerPipelineVisible] = useState(false);
   const [expandedChat, setExpandedChat] = useState<'buyer' | 'seller' | null>(null);
   const [selectedAgentDetails, setSelectedAgentDetails] = useState<'buyer' | 'seller' | null>(null);
+  const [fetchedCardData, setFetchedCardData] = useState<{ buyer?: AgentCardData; seller?: AgentCardData }>({});
   const [isBuyerAgentTyping, setIsBuyerAgentTyping] = useState(false);
 
   // Live negotiation tracking
@@ -408,9 +495,70 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
   };
 
   // ── Direct insertion in arrival order — no sorting, arrival order IS correct order
-  const addNegotiationMsg = (msg: NegotiationMessage) => {
+  const addNegotiationMsg = async (msg: NegotiationMessage) => {
+    // ── IPEX injection: before any invoice (standard or DD), fetch grant+admit ──
+    const isInvoice = msg.kind === 'invoice';
+
+    if (isInvoice) {
+      try {
+        const r = await fetch('http://localhost:4000/api/ipex-status');
+        if (r.ok) {
+          const ipex: any = await r.json();
+          const ts = new Date(msg.timestamp);
+          const entriesToAdd: ChatEntry[] = [];
+
+          if (ipex.grant) {
+            const g = ipex.grant;
+            const id = `ipex-grant-${msg.id}`;
+            entriesToAdd.push({
+              id,
+              seq: nextSeq(),
+              text: `📤 IPEX GRANT — jupiterSellerAgent → tommyBuyerAgent\nCredential SAID : ${g.credentialSAID}\nGrant SAID      : ${g.grantSAID}\nInvoice         : ${g.invoiceNumber}  ${g.amount?.toLocaleString()} ${g.currency}\nSelf-Attested   : ${g.selfAttested ? '✓ YES (issuer = issuee)' : 'NO'}\nSeller LEI      : ${g.sellerLEI}\nBuyer LEI       : ${g.buyerLEI}`,
+              from: 'SELLER' as const,
+              timestamp: new Date(ts.getTime() - 2000),
+              kind: 'info' as const,
+            });
+          }
+
+          if (ipex.admit) {
+            const a = ipex.admit;
+            const id = `ipex-admit-${msg.id}`;
+            entriesToAdd.push({
+              id,
+              seq: nextSeq(),
+              text: `📥 IPEX ADMIT — tommyBuyerAgent admitted grant\nGrant SAID      : ${a.grantSAID}\nCredential SAID : ${a.credentialSAID}\nInvoice         : ${a.invoiceNumber}  ${a.amount?.toLocaleString()} ${a.currency}\nStored in       : tommyBuyerAgent KERIA storage`,
+              from: 'BUYER' as const,
+              timestamp: new Date(ts.getTime() - 1000),
+              kind: 'info' as const,
+            });
+          }
+
+          // Insert grant + admit + invoice all at once so they appear in order
+          if (entriesToAdd.length > 0) {
+            setNegotiationEntries(prev => {
+              if (prev.some(e => e.id === msg.id)) return prev;
+              const newIds = new Set(entriesToAdd.map(e => e.id));
+              const filtered = prev.filter(e => !newIds.has(e.id));
+              return [...filtered, ...entriesToAdd, {
+                id: msg.id,
+                seq: nextSeq(),
+                text: msg.text,
+                from: msg.from,
+                timestamp: new Date(msg.timestamp),
+                kind: msg.kind,
+              }];
+            });
+            setLiveLog(prev => [...prev, { ts: new Date(msg.timestamp).toLocaleTimeString(), from: msg.from as 'BUYER' | 'SELLER', text: msg.text }]);
+            if (msg.kind === 'invoice' && !msg.text.includes('DD Invoice') && !msg.text.includes('✅ DD')) setFlowStep('invoice');
+            if (msg.text.includes('✅ DD Invoice') || msg.text.includes('DD Invoice received') || msg.text.includes('🎉 End-to-end')) setFlowStep('dd_invoice');
+            return; // skip the normal add below
+          }
+        }
+      } catch { /* api-server not running — fall through to normal add */ }
+    }
+
     setNegotiationEntries(prev => {
-      if (prev.some(e => e.id === msg.id)) return prev; // deduplicate
+      if (prev.some(e => e.id === msg.id)) return prev;
       return [...prev, {
         id: msg.id,
         seq: nextSeq(),
@@ -449,11 +597,19 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
       if (update.status === 'FAILED') { setNegotiationStatus('failed'); setIsBuyerAgentTyping(false); }
     }
   };
+  // Normalise unit labels from running agents — replace /unit with /fabric unit
+  const normaliseMsg = (msg: NegotiationMessage): NegotiationMessage => ({
+    ...msg,
+    text: msg.text
+      .replace(/\/unit\b/g, '/fabric unit')
+      .replace(/\b(\d[\d,]*)\s+units\b/g, '$1 fabric units'),
+  });
+
   // Keep buyer SSE handler ref fresh
   useEffect(() => {
     negotiationHandlerRef.current = (msg: NegotiationMessage) => {
       if (msg.text.includes('Connected to buyer agent events')) return;
-      addNegotiationMsg(msg);
+      addNegotiationMsg(normaliseMsg(msg));
     };
   });
 
@@ -461,7 +617,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
   useEffect(() => {
     sellerHandlerRef.current = (msg: NegotiationMessage) => {
       if (msg.text.includes('Connected to seller agent events')) return;
-      addNegotiationMsg(msg);
+      addNegotiationMsg(normaliseMsg(msg));
     };
   });
 
@@ -574,6 +730,19 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
     // ── REAL A2A AGENT: start negotiation ────────────────────────────────────
     if (lower.startsWith('start negotiation')) {
       addBuyerUserMsg(command);
+
+      // ── vLEI gate: seller must be verified before negotiation can start ───
+      if (!buyerVerificationResult?.success) {
+        addBuyerSystem(
+          '🔒 Cannot start negotiation — seller vLEI not verified yet.\n' +
+          '→ Step 1: "fetch seller agent" (needs A2A seller running on :8080)\n' +
+          '→ Step 2: "verify agent" (needs vLEI api-server running on :4000)\n' +
+          'Then retry: "start negotiation 300"',
+          'system'
+        );
+        return;
+      }
+
       setIsBuyerAgentTyping(true);
       setNegotiationStatus('in_progress');
       setNegotiationRounds([]);
@@ -584,6 +753,70 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
       setFlowStep('none');
       setBuyerSystemEntries([]);
       setSellerSystemEntries([]);
+
+      // ── Treasury agent verification in Treasury Chat ──────────────────────
+      (async () => {
+        // Step 1: fetch treasury agent card from :7070
+        setTreasuryEntries([{
+          id: crypto.randomUUID(), seq: nextSeq(),
+          text: '🏦 Fetching JupiterTreasuryAgent card from :7070...',
+          from: 'TREASURY', timestamp: new Date(), kind: 'info',
+        }]);
+        const treasuryCard = await fetchAgentCard('treasury' as any);
+        if (treasuryCard) {
+          const ext = (treasuryCard as any).extensions;
+          const aid = ext?.keriIdentifiers?.agentAID ?? 'unknown';
+          const lei = ext?.gleifIdentity?.lei ?? 'unknown';
+          const parent = ext?.vLEImetadata?.parentAgentName ?? 'jupiterSellerAgent';
+          setTreasuryEntries(prev => [...prev, {
+            id: crypto.randomUUID(), seq: nextSeq(),
+            text: `✅ JupiterTreasuryAgent card fetched\nAID: ${aid}\nLEI: ${lei}\nSub-delegated from: ${parent}`,
+            from: 'TREASURY', timestamp: new Date(), kind: 'info',
+          }]);
+        } else {
+          setTreasuryEntries(prev => [...prev, {
+            id: crypto.randomUUID(), seq: nextSeq(),
+            text: '⚠️ Could not fetch treasury agent card — is :7070 running?',
+            from: 'TREASURY', timestamp: new Date(), kind: 'info',
+          }]);
+        }
+
+        // Step 2: verify treasury via /api/status
+        setTreasuryEntries(prev => [...prev, {
+          id: crypto.randomUUID(), seq: nextSeq(),
+          text: '🔐 Verifying JupiterTreasuryAgent delegation chain via vLEI api-server...',
+          from: 'TREASURY', timestamp: new Date(), kind: 'info',
+        }]);
+        try {
+          const statusRes = await fetch('http://localhost:4000/api/status');
+          if (statusRes.ok) {
+            const status = await statusRes.json() as any;
+            const t = status.treasury;
+            if (t?.verified) {
+              setTreasuryEntries(prev => [...prev, {
+                id: crypto.randomUUID(), seq: nextSeq(),
+                text: `✅ JupiterTreasuryAgent VERIFIED\nAID: ${t.agentAID}\nTrust chain: GEDA → QVI → Jupiter_Chief_Sales_Officer → jupiterSellerAgent → JupiterTreasuryAgent\nScope: treasury_operations`,
+                from: 'TREASURY', timestamp: new Date(), kind: 'info',
+              }]);
+            } else {
+              setTreasuryEntries(prev => [...prev, {
+                id: crypto.randomUUID(), seq: nextSeq(),
+                text: '⚠️ Treasury agent not found in task-data — run 4D workflow first',
+                from: 'TREASURY', timestamp: new Date(), kind: 'info',
+              }]);
+            }
+          } else {
+            throw new Error(`HTTP ${statusRes.status}`);
+          }
+        } catch (err: any) {
+          setTreasuryEntries(prev => [...prev, {
+            id: crypto.randomUUID(), seq: nextSeq(),
+            text: `⚠️ vLEI api-server unreachable (:4000) — treasury verification skipped\n${err.message}`,
+            from: 'TREASURY', timestamp: new Date(), kind: 'info',
+          }]);
+        }
+      })();
+      // ─────────────────────────────────────────────────────────────────────
 
       simulation.updateAgentStatus('buyer', 'active');
       simulation.updateAgentStatus('seller', 'active');
@@ -603,45 +836,54 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
 
     if (parsed.intent === 'fetch_my_agent') {
       addBuyerUserMsg(command);
-      setTimeout(() => {
-        addBuyerSystem('🔵 Fetching Buyer Agent...', 'fetch');
+      setTimeout(async () => {
+        addBuyerSystem('🔵 Fetching Buyer Agent from :9090...', 'fetch');
         setBuyerSectionFetchedAgents(prev => ({ ...prev, buyer: true }));
-        setTimeout(() => {
-          addBuyerSystem('✅ Buyer Agent Card Fetched - Complete', 'system');
-        }, 1000);
+        const card = await fetchAgentCard('buyer');
+        if (card) {
+          setFetchedCardData(prev => ({ ...prev, buyer: card }));
+          setTimeout(() => addBuyerSystem('✅ Buyer Agent Card Fetched - Complete', 'system'), 1000);
+        } else {
+          addBuyerSystem('❌ Could not fetch Buyer Agent card — is the buyer agent running on :9090?', 'system');
+          setBuyerSectionFetchedAgents(prev => ({ ...prev, buyer: false }));
+        }
       }, 500);
     } else if (parsed.intent === 'fetch_other_agent' && parsed.entity === 'seller') {
       addBuyerUserMsg(command);
-      setTimeout(() => {
-        addBuyerSystem('🟢 Fetching Seller Agent...', 'fetch');
+      setTimeout(async () => {
+        addBuyerSystem('🟢 Fetching Seller Agent from :8080...', 'fetch');
         setBuyerSectionFetchedAgents(prev => ({ ...prev, seller: true }));
-        setTimeout(() => {
-          addBuyerSystem('✅ Seller Agent Card Fetched - Complete', 'system');
-        }, 1000);
+        const card = await fetchAgentCard('seller');
+        if (card) {
+          setFetchedCardData(prev => ({ ...prev, seller: card }));
+          setTimeout(() => addBuyerSystem('✅ Seller Agent Card Fetched - Complete', 'system'), 1000);
+        } else {
+          addBuyerSystem('❌ Could not fetch Seller Agent card — is the seller agent running on :8080?', 'system');
+          setBuyerSectionFetchedAgents(prev => ({ ...prev, seller: false }));
+        }
       }, 500);
     } else if (parsed.intent === 'verify_agent' && parsed.entity === 'seller') {
       addBuyerUserMsg(command);
+      // Gate: must fetch seller agent card first
+      if (!buyerSectionFetchedAgents.seller) {
+        addBuyerSystem('⚠️ Fetch the seller agent first before verifying.\nType: "fetch seller agent"', 'system');
+        return;
+      }
       setBuyerVerificationStep(1);
-      setTimeout(() => {
-        addBuyerSystem('🔍 Step 1: Found ✓', 'verification');
-        setBuyerVerificationStep(2);
-        setTimeout(() => {
-          addBuyerSystem('📦 Step 2: Fetched ✓', 'verification');
-          setBuyerVerificationStep(3);
-          setTimeout(() => {
-            addBuyerSystem('🔄 Step 3: Checked ✓', 'verification');
-            setBuyerVerificationStep(4);
-            setTimeout(() => {
-              addBuyerSystem('✅ Step 4: Verified ✓', 'verification');
-              setTimeout(() => {
-                addBuyerSystem('🎉 Seller Agent Verified by Buyer - Complete', 'system');
-                addBuyerSystem('✅ Agent authentication complete! Ready for secure transactions.', 'system');
-                setBuyerVerificationStep(0);
-              }, 800);
-            }, 800);
-          }, 800);
-        }, 800);
-      }, 500);
+      setBuyerVerificationResult(null);
+      setBuyerPipelineVisible(true);
+      addBuyerSystem('🔐 Contacting vLEI api-server (:4000) — verifying seller delegation chain...', 'verification');
+      verifyAgent('buyer', 'seller').then(result => {
+        setBuyerVerificationStep(4);
+        setBuyerVerificationResult(result);
+        if (result.success) {
+          addBuyerSystem('✅ Seller delegation chain VERIFIED — ready to negotiate', 'system');
+          // Hide pipeline 6s after verification completes
+          setTimeout(() => setBuyerPipelineVisible(false), 6000);
+        } else {
+          addBuyerSystem(`❌ Verification FAILED — ${result.error ?? 'Unknown error'}\n⚠️ Is vLEI running? Check api-server on :4000`, 'verification');
+        }
+      });
     } else if (parsed.intent === 'start_simulation') {
       addBuyerUserMsg(command);
       setTimeout(() => {
@@ -664,45 +906,47 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
     
     if (parsed.intent === 'fetch_my_agent') {
       addSellerSystem(command, 'user');
-      setTimeout(() => {
+      setTimeout(async () => {
         addSellerSystem('🟢 Fetching Seller Agent...', 'fetch');
         setSellerSectionFetchedAgents(prev => ({ ...prev, seller: true }));
+        const card = await fetchAgentCard('seller');
+        if (card) setFetchedCardData(prev => ({ ...prev, seller: card }));
         setTimeout(() => {
           addSellerSystem('✅ Seller Agent Card Fetched - Complete', 'system');
         }, 1000);
       }, 500);
     } else if (parsed.intent === 'fetch_other_agent' && parsed.entity === 'buyer') {
       addSellerSystem(command, 'user');
-      setTimeout(() => {
+      setTimeout(async () => {
         addSellerSystem('🔵 Fetching Buyer Agent...', 'fetch');
         setSellerSectionFetchedAgents(prev => ({ ...prev, buyer: true }));
+        const card = await fetchAgentCard('buyer');
+        if (card) setFetchedCardData(prev => ({ ...prev, buyer: card }));
         setTimeout(() => {
           addSellerSystem('✅ Buyer Agent Card Fetched - Complete', 'system');
         }, 1000);
       }, 500);
     } else if (parsed.intent === 'verify_agent' && parsed.entity === 'buyer') {
       addSellerSystem(command, 'user');
+      // Gate: must fetch buyer agent card first
+      if (!sellerSectionFetchedAgents.buyer) {
+        addSellerSystem('⚠️ Fetch the buyer agent first before verifying.\nType: "fetch buyer agent"', 'system');
+        return;
+      }
       setSellerVerificationStep(1);
-      setTimeout(() => {
-        addSellerSystem('🔍 Step 1: Found ✓', 'verification');
-        setSellerVerificationStep(2);
-        setTimeout(() => {
-          addSellerSystem('📦 Step 2: Fetched ✓', 'verification');
-          setSellerVerificationStep(3);
-          setTimeout(() => {
-            addSellerSystem('🔄 Step 3: Checked ✓', 'verification');
-            setSellerVerificationStep(4);
-            setTimeout(() => {
-              addSellerSystem('✅ Step 4: Verified ✓', 'verification');
-              setTimeout(() => {
-                addSellerSystem('🎉 Buyer Agent Verified by Seller - Complete', 'system');
-                addSellerSystem('✅ Agent authentication complete! Ready for secure transactions.', 'system');
-                setSellerVerificationStep(0);
-              }, 800);
-            }, 800);
-          }, 800);
-        }, 800);
-      }, 500);
+      setSellerVerificationResult(null);
+      setSellerPipelineVisible(true);
+      addSellerSystem('🔐 Contacting vLEI api-server (:4000) — verifying buyer delegation chain...', 'verification');
+      verifyAgent('seller', 'buyer').then(result => {
+        setSellerVerificationStep(4);
+        setSellerVerificationResult(result);
+        if (result.success) {
+          addSellerSystem('✅ Buyer delegation chain VERIFIED — ready to negotiate', 'system');
+          setTimeout(() => setSellerPipelineVisible(false), 6000);
+        } else {
+          addSellerSystem(`❌ Verification FAILED — ${result.error ?? 'Unknown error'}\n⚠️ Is vLEI running? Check api-server on :4000`, 'verification');
+        }
+      });
     } else if (parsed.intent === 'start_simulation') {
       addSellerSystem(command, 'user');
       setTimeout(() => {
@@ -826,7 +1070,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
       </div>
 
       {/* Four Column Agent View - Buyer Treasury, Buyer, Separator, Seller, Seller Treasury */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr_3px_2fr_1fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_3fr_3px_3fr_1fr] gap-6">
         {/* Buyer's Treasury Agent */}
         <div className="space-y-4">
           <div className="agent-card-treasury rounded-xl p-5 backdrop-blur-xl bg-agent-treasury/10 border border-agent-treasury/30">
@@ -850,7 +1094,9 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
           <div className="agent-card-buyer rounded-xl p-5 backdrop-blur-xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <StatusIndicator status={agents.buyer.status} agent="buyer" size="lg" />
+                <div className="w-9 h-9 rounded-full bg-agent-buyer/20 border border-agent-buyer/40 flex items-center justify-center flex-shrink-0">
+                  <ShoppingBag size={18} className="text-agent-buyer" />
+                </div>
                 <div className="flex-1">
                   <h3 className="font-bold text-agent-buyer text-sm">Buyer Organization</h3>
                   <p className="text-xs text-muted-foreground">Success Rate: {agents.buyer.successRate}%</p>
@@ -867,10 +1113,13 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
                   <p className="font-semibold text-foreground">TOMMY HILFIGER EUROPE B.V.</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">LEI: <span className="text-foreground font-mono text-[10px]">549300T2OJWZMYHNJW95</span></p>
+                  <p className="text-muted-foreground">LEI: <span className="text-foreground font-mono text-[10px]">54930012QJWZMYHNJW95</span></p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Address: <span className="text-foreground">Danzigerkade 165, 1013 AP Amsterdam, Netherlands</span></p>
+                  <p className="text-muted-foreground">Agent AID: <span className="text-foreground font-mono text-[10px] break-all">ED_YWt1tpDFlTX-h_4ILS3QfIJbO4g5pSiH9soD1ZMg4</span></p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">OOR Holder: <span className="text-foreground">Tommy_Chief_Procurement_Officer</span></p>
                 </div>
               </div>
             </div>
@@ -904,7 +1153,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
             <div className="space-y-3">
               <div 
                 ref={buyerChatRef}
-                className="bg-agent-buyer/5 rounded-lg p-3 h-[350px] overflow-y-auto hide-scrollbar"
+                className="bg-agent-buyer/5 rounded-lg p-3 h-[480px] overflow-y-auto hide-scrollbar"
               >
                 {(negotiationEntries.length > 0 || buyerSystemEntries.length > 0) ? (
                   <div className="space-y-2">
@@ -920,7 +1169,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
                     <div className="text-center">
                       <MessageSquare size={32} className="mx-auto mb-2 opacity-30" />
                       <p className="text-xs">Type commands to interact</p>
-                      <p className="text-xs mt-1">Try: "start negotiation 300"</p>
+                      <p className="text-xs mt-1 text-amber-400/80">1. "fetch seller agent" (A2A :8080) → 2. "verify agent" (vLEI :4000) → 3. "start negotiation"</p>
                     </div>
                   </div>
                 )}
@@ -933,7 +1182,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
               </div>
               <form onSubmit={handleBuyerSubmit} className="flex gap-2">
                 <Input 
-                  placeholder="Type command (e.g., start negotiation 300)..."
+                  placeholder={buyerVerificationResult?.success ? "start negotiation 300..." : "fetch seller agent → verify agent → start negotiation"}
                   value={buyerChatInput}
                   onChange={(e) => setBuyerChatInput(e.target.value)}
                   className="flex-1 text-xs h-8 bg-background/50"
@@ -945,41 +1194,11 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
             </div>
           </div>
 
-          {/* Agentic Verification Flow for Buyer */}
-          {buyerVerificationStep > 0 && (
+          {/* GLEIF Verification Pipeline for Buyer */}
+          {buyerPipelineVisible && (
             <div className="glass-card p-4">
-              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                🔐 Agentic Verification Flow
-              </h4>
-              <div className="flex items-center justify-between gap-2">
-                <div className={cn('flex flex-col items-center flex-1', buyerVerificationStep >= 1 && 'opacity-100', buyerVerificationStep < 1 && 'opacity-30')}>
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-1', buyerVerificationStep >= 1 ? 'bg-blue-500' : 'bg-muted')}>
-                    <span className="text-lg">👤</span>
-                  </div>
-                  <p className="text-xs text-center">Found ✓<br/>Step 1</p>
-                </div>
-                <div className={cn('h-0.5 flex-1', buyerVerificationStep >= 2 ? 'bg-purple-500' : 'bg-muted')}></div>
-                <div className={cn('flex flex-col items-center flex-1', buyerVerificationStep >= 2 && 'opacity-100', buyerVerificationStep < 2 && 'opacity-30')}>
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-1', buyerVerificationStep >= 2 ? 'bg-purple-500' : 'bg-muted')}>
-                    <span className="text-lg">📦</span>
-                  </div>
-                  <p className="text-xs text-center">Fetched ✓<br/>Step 2</p>
-                </div>
-                <div className={cn('h-0.5 flex-1', buyerVerificationStep >= 3 ? 'bg-orange-500' : 'bg-muted')}></div>
-                <div className={cn('flex flex-col items-center flex-1', buyerVerificationStep >= 3 && 'opacity-100', buyerVerificationStep < 3 && 'opacity-30')}>
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-1', buyerVerificationStep >= 3 ? 'bg-orange-500' : 'bg-muted')}>
-                    <span className="text-lg">🔄</span>
-                  </div>
-                  <p className="text-xs text-center">Checked ✓<br/>Step 3</p>
-                </div>
-                <div className={cn('h-0.5 flex-1', buyerVerificationStep >= 4 ? 'bg-green-500' : 'bg-muted')}></div>
-                <div className={cn('flex flex-col items-center flex-1', buyerVerificationStep >= 4 && 'opacity-100', buyerVerificationStep < 4 && 'opacity-30')}>
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-1', buyerVerificationStep >= 4 ? 'bg-green-500' : 'bg-muted')}>
-                    <span className="text-lg">✅</span>
-                  </div>
-                  <p className="text-xs text-center">Verified ✓<br/>Step 4</p>
-                </div>
-              </div>
+              <h4 className="text-sm font-medium mb-4 flex items-center gap-2">🔐 GLEIF Verification Pipeline</h4>
+              <GleifPipeline verifyingTarget="seller" result={buyerVerificationResult} />
             </div>
           )}
 
@@ -1027,7 +1246,9 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
           <div className="agent-card-seller rounded-xl p-5 backdrop-blur-xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <StatusIndicator status={agents.seller.status} agent="seller" size="lg" />
+                <div className="w-9 h-9 rounded-full bg-agent-seller/20 border border-agent-seller/40 flex items-center justify-center flex-shrink-0">
+                  <Factory size={18} className="text-agent-seller" />
+                </div>
                 <div className="flex-1">
                   <h3 className="font-bold text-agent-seller text-sm">Seller Organization</h3>
                   <p className="text-xs text-muted-foreground">Success Rate: {agents.seller.successRate}%</p>
@@ -1044,10 +1265,13 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
                   <p className="font-semibold text-foreground">JUPITER KNITTING COMPANY</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">LEI: <span className="text-foreground font-mono text-[10px]">335800EUXKAMRWRUVH05</span></p>
+                  <p className="text-muted-foreground">LEI: <span className="text-foreground font-mono text-[10px]">3358004DXAMRWRUIYJ05</span></p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Address: <span className="text-foreground">5/22, Textile Park, Tiruppur, Tamil Nadu, India</span></p>
+                  <p className="text-muted-foreground">Agent AID: <span className="text-foreground font-mono text-[10px] break-all">ENR7Xj2xCtdwMUAbCbBHYSu1Iv029w2qtc_zjLyo740b</span></p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">OOR Holder: <span className="text-foreground">Jupiter_Chief_Sales_Officer</span></p>
                 </div>
               </div>
             </div>
@@ -1081,7 +1305,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
             <div className="space-y-3">
               <div 
                 ref={sellerChatRef}
-                className="bg-agent-seller/5 rounded-lg p-3 h-[350px] overflow-y-auto hide-scrollbar"
+                className="bg-agent-seller/5 rounded-lg p-3 h-[480px] overflow-y-auto hide-scrollbar"
               >
                 {(negotiationEntries.length > 0 || sellerSystemEntries.length > 0) ? (
                   <div className="space-y-2">
@@ -1115,41 +1339,11 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
             </div>
           </div>
 
-          {/* Agentic Verification Flow for Seller */}
-          {sellerVerificationStep > 0 && (
+          {/* GLEIF Verification Pipeline for Seller */}
+          {sellerPipelineVisible && (
             <div className="glass-card p-4">
-              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                🔐 Agentic Verification Flow
-              </h4>
-              <div className="flex items-center justify-between gap-2">
-                <div className={cn('flex flex-col items-center flex-1', sellerVerificationStep >= 1 && 'opacity-100', sellerVerificationStep < 1 && 'opacity-30')}>
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-1', sellerVerificationStep >= 1 ? 'bg-blue-500' : 'bg-muted')}>
-                    <span className="text-lg">👤</span>
-                  </div>
-                  <p className="text-xs text-center">Found ✓<br/>Step 1</p>
-                </div>
-                <div className={cn('h-0.5 flex-1', sellerVerificationStep >= 2 ? 'bg-purple-500' : 'bg-muted')}></div>
-                <div className={cn('flex flex-col items-center flex-1', sellerVerificationStep >= 2 && 'opacity-100', sellerVerificationStep < 2 && 'opacity-30')}>
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-1', sellerVerificationStep >= 2 ? 'bg-purple-500' : 'bg-muted')}>
-                    <span className="text-lg">📦</span>
-                  </div>
-                  <p className="text-xs text-center">Fetched ✓<br/>Step 2</p>
-                </div>
-                <div className={cn('h-0.5 flex-1', sellerVerificationStep >= 3 ? 'bg-orange-500' : 'bg-muted')}></div>
-                <div className={cn('flex flex-col items-center flex-1', sellerVerificationStep >= 3 && 'opacity-100', sellerVerificationStep < 3 && 'opacity-30')}>
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-1', sellerVerificationStep >= 3 ? 'bg-orange-500' : 'bg-muted')}>
-                    <span className="text-lg">🔄</span>
-                  </div>
-                  <p className="text-xs text-center">Checked ✓<br/>Step 3</p>
-                </div>
-                <div className={cn('h-0.5 flex-1', sellerVerificationStep >= 4 ? 'bg-green-500' : 'bg-muted')}></div>
-                <div className={cn('flex flex-col items-center flex-1', sellerVerificationStep >= 4 && 'opacity-100', sellerVerificationStep < 4 && 'opacity-30')}>
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-1', sellerVerificationStep >= 4 ? 'bg-green-500' : 'bg-muted')}>
-                    <span className="text-lg">✅</span>
-                  </div>
-                  <p className="text-xs text-center">Verified ✓<br/>Step 4</p>
-                </div>
-              </div>
+              <h4 className="text-sm font-medium mb-4 flex items-center gap-2">🔐 GLEIF Verification Pipeline</h4>
+              <GleifPipeline verifyingTarget="buyer" result={sellerVerificationResult} />
             </div>
           )}
 
@@ -1571,91 +1765,151 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Agent Details Dialog */}
+      {/* Agent Details Dialog — real data from live agent card */}
       <Dialog open={selectedAgentDetails !== null} onOpenChange={() => setSelectedAgentDetails(null)}>
-        <DialogContent className="sm:max-w-[500px] glass-card">
+        <DialogContent className="sm:max-w-[520px] glass-card max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className={cn(
               'text-lg font-bold',
               selectedAgentDetails === 'buyer' ? 'text-agent-buyer' : 'text-agent-seller'
             )}>
-              {selectedAgentDetails === 'buyer' ? 'Buyer Organization' : 'Seller Organization'}
+              {selectedAgentDetails === 'buyer' ? 'Buyer Agent Card' : 'Seller Agent Card'}
             </DialogTitle>
           </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {selectedAgentDetails === 'buyer' ? (
-              <>
+
+          {(() => {
+            const card = selectedAgentDetails ? fetchedCardData[selectedAgentDetails] : null;
+            const colorClass = selectedAgentDetails === 'buyer' ? 'bg-agent-buyer/20' : 'bg-agent-seller/20';
+            const gleif = card?.extensions?.gleifIdentity;
+            const vlei = card?.extensions?.vLEImetadata;
+            const keri = card?.extensions?.keriIdentifiers;
+
+            if (!card) {
+              return (
+                <div className="py-8 text-center text-muted-foreground text-sm">
+                  No agent card data available. Try fetching the agent first.
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4 py-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-agent-buyer/20 flex items-center justify-center">
+                  <div className={cn('w-12 h-12 rounded-lg flex items-center justify-center', colorClass)}>
                     <span className="text-2xl">🏢</span>
                   </div>
                   <div>
-                    <p className="font-bold text-lg">TOMMY HILFIGER EUROPE B.V.</p>
+                    <p className="font-bold text-base">{gleif?.legalEntityName ?? card.name}</p>
+                    <p className="text-xs text-muted-foreground">{card.description}</p>
                   </div>
                 </div>
-                
-                <div className="space-y-3">
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Legal Entity Identifier (LEI)</p>
-                    <p className="font-mono text-sm font-semibold">549300T2OJWZMYHNJW95</p>
-                  </div>
-                  
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Address</p>
-                    <p className="text-sm">Danzigerkade 165, 1013 AP Amsterdam, Netherlands</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-muted/30 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Status</p>
-                      <p className="text-sm font-semibold text-success">Active</p>
-                    </div>
-                    <div className="bg-muted/30 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Verified</p>
-                      <p className="text-sm font-semibold text-success">✓ Yes</p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-agent-seller/20 flex items-center justify-center">
-                    <span className="text-2xl">🏢</span>
-                  </div>
-                  <div>
-                    <p className="font-bold text-lg">JUPITER KNITTING COMPANY</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Legal Entity Identifier (LEI)</p>
-                    <p className="font-mono text-sm font-semibold">335800EUXKAMRWRUVH05</p>
-                  </div>
-                  
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Address</p>
-                    <p className="text-sm">5/22, Textile Park, Tiruppur, Tamil Nadu, India</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-muted/30 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Status</p>
-                      <p className="text-sm font-semibold text-success">Active</p>
-                    </div>
-                    <div className="bg-muted/30 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Verified</p>
-                      <p className="text-sm font-semibold text-success">✓ Yes</p>
+
+                {gleif && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">GLEIF Identity</p>
+                    <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">LEI</span>
+                        <span className="font-mono text-xs font-semibold">{gleif.lei}</span>
+                      </div>
+                      {gleif.officialRole && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Official Role</span>
+                          <span className="text-xs">{gleif.officialRole}</span>
+                        </div>
+                      )}
+                      {gleif.engagementRole && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Engagement Role</span>
+                          <span className="text-xs">{gleif.engagementRole}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-          
-          <div className="flex justify-end">
+                )}
+
+                {vlei && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">vLEI Verification</p>
+                    <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">Status</span>
+                        <span className={cn('text-xs font-semibold', vlei.status === 'verified' ? 'text-green-400' : 'text-yellow-400')}>
+                          {vlei.status === 'verified' ? '✓ Verified' : vlei.status}
+                        </span>
+                      </div>
+                      {vlei.verificationPath && (
+                        <div>
+                          <span className="text-xs text-muted-foreground">Trust Chain</span>
+                          <div className="mt-1 space-y-0.5">
+                            {vlei.verificationPath.map((step, i) => (
+                              <p key={i} className="text-xs font-mono text-foreground/70">{step}</p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {vlei.timestamp && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">Verified At</span>
+                          <span className="text-xs font-mono">{new Date(vlei.timestamp).toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {keri && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">KERI Identifiers</p>
+                    <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                      {keri.agentAID && (
+                        <div>
+                          <span className="text-xs text-muted-foreground">Agent AID</span>
+                          <p className="font-mono text-[10px] break-all text-foreground/80 mt-0.5">{keri.agentAID}</p>
+                        </div>
+                      )}
+                      {keri.legalEntityAID && (
+                        <div>
+                          <span className="text-xs text-muted-foreground">Legal Entity AID</span>
+                          <p className="font-mono text-[10px] break-all text-foreground/80 mt-0.5">{keri.legalEntityAID}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {card.skills && card.skills.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Skills</p>
+                    <div className="space-y-2">
+                      {card.skills.map(skill => (
+                        <div key={skill.id} className="bg-muted/30 rounded-lg p-3">
+                          <p className="text-xs font-semibold">{skill.name}</p>
+                          {skill.description && <p className="text-xs text-muted-foreground mt-0.5">{skill.description}</p>}
+                          {skill.tags && skill.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {skill.tags.map(tag => (
+                                <span key={tag} className="text-[10px] bg-muted/50 rounded px-1.5 py-0.5 text-muted-foreground">{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {card.provider && (
+                  <div className="bg-muted/20 rounded-lg p-3 flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Provider</span>
+                    <span className="text-xs font-semibold">{card.provider.organization}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="flex justify-end pt-2">
             <Button onClick={() => setSelectedAgentDetails(null)}>Close</Button>
           </div>
         </DialogContent>
@@ -1663,5 +1917,11 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
     </div>
   );
 }
+
+
+
+
+
+
 
 

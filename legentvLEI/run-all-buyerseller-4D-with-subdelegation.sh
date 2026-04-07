@@ -57,7 +57,14 @@ echo ""
 echo -e "${YELLOW}[Phase 1] Running base vLEI workflow (4C)...${NC}"
 echo ""
 
-if [ -f "./run-all-buyerseller-4C-with-agents.sh" ]; then
+# Check if 4C already completed by looking for key output files
+if [ -f "./task-data/jupiterSellerAgent-info.json" ] && \
+   [ -f "./task-data/tommyBuyerAgent-info.json" ] && \
+   [ -f "./task-data/jupiterSellerAgent-ipex-grant-info.json" ]; then
+    echo -e "${GREEN}✓ Phase 1 SKIPPED: 4C workflow already completed (task-data files present)${NC}"
+    echo "  Found: jupiterSellerAgent-info.json, tommyBuyerAgent-info.json, ipex-grant-info.json"
+    echo ""
+elif [ -f "./run-all-buyerseller-4C-with-agents.sh" ]; then
     ./run-all-buyerseller-4C-with-agents.sh
     
     if [ $? -ne 0 ]; then

@@ -169,8 +169,8 @@ export function calculateNetCashFlow(contracts: Contract[], weeks: number = 12, 
     });
   });
   
-  // Calculate net and cumulative
-  let cumulative = 100000; // Starting cash position
+  // Calculate net and cumulative — start from 0, real balance comes from treasury agent (:7070/health)
+  let cumulative = 0;
   cashFlows.forEach(cf => {
     cf.net = cf.inflows - cf.outflows;
     cumulative += cf.net;
