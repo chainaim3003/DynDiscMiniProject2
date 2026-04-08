@@ -25,7 +25,7 @@ cd /mnt/c/Users/WELCOME/Documents/chainaim/mcp\ server/DynDiscMiniProject2/legen
 ## Step 2 — Start vLEI API Server (WSL)
 
 ```bash
-cd /mnt/c/Users/WELCOME/Documents/chainaim/mcp\ server/DynDiscMiniProject2/legentvLEI/api-server
+cd 'c:\Users\WELCOME\Documents\chainaim\mcp server\DynDiscMiniProject2\legentvLEI\api-server'  
 node server.js
 # Runs on http://localhost:4000
 ```

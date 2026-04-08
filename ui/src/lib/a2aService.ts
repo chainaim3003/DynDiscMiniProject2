@@ -31,7 +31,7 @@ export function classifyMessage(text: string): NegotiationMessage['kind'] {
   // Discounted invoice — only after DD_ACCEPT is processed by seller
   if (text.includes('✅ DD Invoice') || text.includes('🎉 End-to-end') || text.includes('DD Invoice received')) return 'invoice';
   // Standard invoice
-  if (text.includes('📄 INVOICE GENERATED') || text.includes('📄  INVOICE GENERATED') || text.includes('GST 18%')) return 'invoice';
+  if (text.includes('📄 INVOICE GENERATED') || text.includes('📄  INVOICE GENERATED') || text.includes('GST 18%') || text.includes('📄 Invoice sent') || text.includes('Invoice sent')) return 'invoice';
   // DD accept/reject confirmations → info (not invoice)
   if (text.includes('✓ DD accepted') || text.includes('DD offer declined') || text.includes('Awaiting discounted invoice')) return 'info';
   if (text.includes('Deal Closed') || text.includes('✓✓') || text.includes('DEAL CLOSED')) return 'accept';
@@ -49,6 +49,7 @@ export function parseNegotiationUpdate(text: string): {
   status?: 'IN_PROGRESS' | 'COMPLETED' | 'ESCALATED' | 'FAILED';
   round?: number;
   buyerOffer?: number;
+  sellerOffer?: number;
   finalPrice?: number;
   totalValue?: number;
 } | null {
@@ -56,7 +57,13 @@ export function parseNegotiationUpdate(text: string): {
     const price = extractPrice(text);
     return price ? { status: 'IN_PROGRESS', round: 1, buyerOffer: price } : null;
   }
-  if (text.includes('Counter-offer sent') || text.includes('Counter-offer')) {
+  // Seller counter (↓) vs buyer counter (↑)
+  if (text.includes('↓ Counter-offer sent') || text.startsWith('↓')) {
+    const price = extractPrice(text);
+    const round = extractRound(text);
+    return price ? { status: 'IN_PROGRESS', round: round ?? 2, sellerOffer: price } : null;
+  }
+  if (text.includes('↑ Counter-offer sent') || text.includes('Counter-offer sent')) {
     const price = extractPrice(text);
     const round = extractRound(text);
     return price ? { status: 'IN_PROGRESS', round: round ?? 2, buyerOffer: price } : null;
@@ -78,7 +85,7 @@ export function parseNegotiationUpdate(text: string): {
 }
 
 function extractPrice(text: string): number | null {
-  const m = text.match(/₹([\d,]+)\s*\/unit/);
+  const m = text.match(/₹([\d,]+)\s*\/(?:fabric\s+)?unit/);
   return m ? parseInt(m[1].replace(/,/g, '')) : null;
 }
 function extractTotal(text: string): number | null {

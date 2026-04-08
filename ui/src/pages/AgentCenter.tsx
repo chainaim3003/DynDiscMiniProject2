@@ -102,7 +102,7 @@ function ChatBubbleEntry({ entry, perspective }: { entry: ChatEntry; perspective
     const mine = perspective === 'buyer';
     return (
       <div className={cn('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
-        {!mine && <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-sm">???</div>}
+        {!mine && <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-[10px] text-white font-bold">B</div>}
         <div className="max-w-[85%] min-w-0">
           <div className="flex items-center gap-1 mb-0.5 opacity-60">
             <span className="text-[10px] font-medium text-agent-buyer">Buyer</span>
@@ -120,7 +120,7 @@ function ChatBubbleEntry({ entry, perspective }: { entry: ChatEntry; perspective
             </div>
           </div>
         </div>
-        {mine && <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-sm">???</div>}
+        {mine && <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 text-[10px] text-white font-bold">B</div>}
       </div>
     );
   }
@@ -513,7 +513,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
             entriesToAdd.push({
               id,
               seq: nextSeq(),
-              text: `📤 IPEX GRANT — jupiterSellerAgent → tommyBuyerAgent\nCredential SAID : ${g.credentialSAID}\nGrant SAID      : ${g.grantSAID}\nInvoice         : ${g.invoiceNumber}  ${g.amount?.toLocaleString()} ${g.currency}\nSelf-Attested   : ${g.selfAttested ? '✓ YES (issuer = issuee)' : 'NO'}\nSeller LEI      : ${g.sellerLEI}\nBuyer LEI       : ${g.buyerLEI}`,
+              text: `📤 IPEX GRANT\njupiterSellerAgent → tommyBuyerAgent\nCredential : ${g.credentialSAID?.slice(0,20)}...\nGrant SAID : ${g.grantSAID?.slice(0,20)}...\nInvoice    : ${g.invoiceNumber}  ${g.amount?.toLocaleString()} ${g.currency}\nSelf-Attested: ${g.selfAttested ? '✓ YES' : 'NO'}\nSeller LEI : ${g.sellerLEI}\nBuyer LEI  : ${g.buyerLEI}`,
               from: 'SELLER' as const,
               timestamp: new Date(ts.getTime() - 2000),
               kind: 'info' as const,
@@ -526,7 +526,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
             entriesToAdd.push({
               id,
               seq: nextSeq(),
-              text: `📥 IPEX ADMIT — tommyBuyerAgent admitted grant\nGrant SAID      : ${a.grantSAID}\nCredential SAID : ${a.credentialSAID}\nInvoice         : ${a.invoiceNumber}  ${a.amount?.toLocaleString()} ${a.currency}\nStored in       : tommyBuyerAgent KERIA storage`,
+              text: `📥 IPEX ADMIT\ntommyBuyerAgent admitted grant\nGrant SAID : ${a.grantSAID?.slice(0,20)}...\nCredential : ${a.credentialSAID?.slice(0,20)}...\nInvoice    : ${a.invoiceNumber}  ${a.amount?.toLocaleString()} ${a.currency}\nStored in  : tommyBuyerAgent KERIA storage`,
               from: 'BUYER' as const,
               timestamp: new Date(ts.getTime() - 1000),
               kind: 'info' as const,
@@ -577,13 +577,17 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
     if (msg.text.includes('✅ DD Invoice') || msg.text.includes('DD Invoice received') || msg.text.includes('🎉 End-to-end')) setFlowStep('dd_invoice');
     const update = parseNegotiationUpdate(msg.text);
     if (update) {
-      if (update.status === 'IN_PROGRESS' && (update.round || update.buyerOffer)) {
+      if (update.status === 'IN_PROGRESS' && (update.round || update.buyerOffer || update.sellerOffer)) {
         setNegotiationStatus('in_progress');
         setNegotiationRounds(prev => {
           const roundNum = update.round ?? (prev.length + 1);
           const existing = prev.find(x => x.round === roundNum);
-          if (existing) return prev.map(x => x.round === roundNum ? { ...x, buyerOffer: update.buyerOffer ?? x.buyerOffer } : x);
-          return [...prev, { round: roundNum, buyerOffer: update.buyerOffer }];
+          if (existing) return prev.map(x => x.round === roundNum ? {
+            ...x,
+            buyerOffer:  update.buyerOffer  ?? x.buyerOffer,
+            sellerOffer: update.sellerOffer ?? x.sellerOffer,
+          } : x);
+          return [...prev, { round: roundNum, buyerOffer: update.buyerOffer, sellerOffer: update.sellerOffer }];
         });
       }
       if (update.status === 'COMPLETED') {
@@ -1023,7 +1027,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
           <div className="max-w-[900px] mx-auto space-y-3">
             {chatEntries.length > 0 ? (
               chatEntries
-                .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+                .sort((a, b) => a.seq - b.seq)
                 .map((entry) => (
                 <ChatBubbleEntry key={entry.id} entry={entry} perspective={isExpandedBuyer ? 'buyer' : 'seller'} />
               ))
@@ -1159,7 +1163,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
                   <div className="space-y-2">
                     {/* Merge and sort all entries by timestamp */}
                     {[...buyerSystemEntries, ...negotiationEntries]
-                      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+                      .sort((a, b) => a.seq - b.seq)
                       .map((entry) => (
                         <ChatBubbleEntry key={entry.id} entry={entry} perspective="buyer" />
                       ))}
@@ -1310,7 +1314,7 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
                 {(negotiationEntries.length > 0 || sellerSystemEntries.length > 0) ? (
                   <div className="space-y-2">
                     {[...sellerSystemEntries, ...negotiationEntries]
-                      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+                      .sort((a, b) => a.seq - b.seq)
                       .map((entry) => (
                         <ChatBubbleEntry key={entry.id} entry={entry} perspective="seller" />
                       ))}

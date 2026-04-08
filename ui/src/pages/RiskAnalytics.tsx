@@ -104,23 +104,25 @@ export function RiskAnalytics({ simulation: _simulation }: RiskAnalyticsProps) {
       return [...acc, { date: e.date, inflow: e.payoff >= 0 ? e.payoff : 0, outflow: e.payoff < 0 ? Math.abs(e.payoff) : 0, balance }];
     }, []);
 
-  // PD scoring from hurdle vs applied gap
+  // PD scoring — aggregate into 3 buckets, not per-invoice
   const pdData = contracts.map(c => {
     const gap = c.hurdleRate - c.appliedRate;
-    const pdScore = Math.max(5, Math.min(95, Math.round(100 - (gap / 0.05) * 80)));
-    return { label: c.invoiceId.slice(-10), pdScore, color: pdScore < 20 ? '#6ee7b7' : pdScore < 50 ? '#fcd34d' : '#fca5a5' };
+    return Math.max(5, Math.min(95, Math.round(100 - (gap / 0.05) * 80)));
   });
+  const avgPD   = pdData.length ? Math.round(pdData.reduce((a, b) => a + b, 0) / pdData.length) : 0;
+  const lowRisk  = pdData.filter(d => d < 20).length;
+  const medRisk  = pdData.filter(d => d >= 20 && d < 50).length;
+  const highRisk = pdData.filter(d => d >= 50).length;
 
-  const rateData = contracts.map(c => ({
-    name: c.invoiceId.slice(-8),
-    maxRate:     parseFloat((c.maxDiscountRate * 100).toFixed(3)),
-    appliedRate: parseFloat((c.appliedRate * 100).toFixed(3)),
-    hurdleRate:  parseFloat((c.hurdleRate * 100).toFixed(2)),
-  }));
-
-  const lowRisk  = pdData.filter(d => d.pdScore < 20).length;
-  const medRisk  = pdData.filter(d => d.pdScore >= 20 && d.pdScore < 50).length;
-  const highRisk = pdData.filter(d => d.pdScore >= 50).length;
+  // Discount rate — aggregate averages, not per-invoice
+  const avgMaxRate     = contracts.length ? contracts.reduce((s, c) => s + c.maxDiscountRate, 0) / contracts.length : 0;
+  const avgAppliedRate = contracts.length ? contracts.reduce((s, c) => s + c.appliedRate, 0) / contracts.length : 0;
+  const avgHurdleRate  = contracts.length ? contracts.reduce((s, c) => s + c.hurdleRate, 0) / contracts.length : 0;
+  const rateData = [
+    { name: 'Max DD Rate',    value: parseFloat((avgMaxRate * 100).toFixed(3)),     fill: '#fcd34d' },
+    { name: 'Applied Rate',   value: parseFloat((avgAppliedRate * 100).toFixed(3)), fill: '#6ee7b7' },
+    { name: 'Hurdle Rate',    value: parseFloat((avgHurdleRate * 100).toFixed(2)),  fill: '#a5b4fc' },
+  ];
 
   const dso = contracts.length ? Math.round(contracts.reduce((s, c) => {
     return s + (new Date(c.settlementDate).getTime() - new Date(c.invoiceDate).getTime()) / 86400000;
@@ -214,34 +216,46 @@ export function RiskAnalytics({ simulation: _simulation }: RiskAnalyticsProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* PD Scoring */}
+        {/* PD Scoring — aggregated summary */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-lg">Probability of Default Scoring</h3>
-              <p className="text-xs text-muted-foreground">Hurdle rate vs applied discount gap per invoice</p>
+              <p className="text-xs text-muted-foreground">Aggregated across {contracts.length} invoices · hurdle vs applied gap</p>
             </div>
             <AlertTriangle size={20} className="text-amber-500" />
           </div>
+          {/* Average PD gauge */}
+          <div className="flex items-center justify-center mb-6">
+            <div className="text-center">
+              <p className={cn('text-5xl font-bold font-mono', avgPD < 20 ? 'text-emerald-400' : avgPD < 50 ? 'text-amber-400' : 'text-rose-400')}>{avgPD}%</p>
+              <p className="text-xs text-muted-foreground mt-1">Average PD Score</p>
+              <p className={cn('text-sm font-semibold mt-1', avgPD < 20 ? 'text-emerald-400' : avgPD < 50 ? 'text-amber-400' : 'text-rose-400')}>
+                {avgPD < 20 ? 'Low Risk' : avgPD < 50 ? 'Medium Risk' : 'High Risk'}
+              </p>
+            </div>
+          </div>
+          {/* Risk distribution */}
           <div className="space-y-3">
-            {pdData.map(d => (
-              <div key={d.label} className="flex items-center gap-3">
-                <div className="w-24 text-right shrink-0">
-                  <span className="text-xs text-muted-foreground font-mono">{d.label}</span>
+            {[
+              { label: 'Low Risk', count: lowRisk,  color: 'bg-emerald-400', text: 'text-emerald-400' },
+              { label: 'Medium Risk', count: medRisk,  color: 'bg-amber-400',   text: 'text-amber-400'   },
+              { label: 'High Risk',   count: highRisk, color: 'bg-rose-400',    text: 'text-rose-400'    },
+            ].map(r => (
+              <div key={r.label} className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground w-20">{r.label}</span>
+                <div className="flex-1 h-4 bg-muted/30 rounded-full overflow-hidden">
+                  <div className={cn('h-full rounded-full transition-all duration-700', r.color)}
+                    style={{ width: contracts.length ? `${(r.count / contracts.length) * 100}%` : '0%' }} />
                 </div>
-                <div className="flex-1 h-7 bg-muted/30 rounded-lg overflow-hidden">
-                  <div className="h-full flex items-center justify-end pr-2 transition-all duration-700"
-                    style={{ width: `${d.pdScore}%`, backgroundColor: d.color }}>
-                    <span className="text-xs font-bold text-white">{d.pdScore}%</span>
-                  </div>
-                </div>
+                <span className={cn('text-xs font-mono font-bold w-6 text-right', r.text)}>{r.count}</span>
               </div>
             ))}
           </div>
           <div className="mt-4 flex items-center justify-center gap-6 text-xs">
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-success" /><span className="text-muted-foreground">Low (&lt;20%)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-warning" /><span className="text-muted-foreground">Medium (20-50%)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-destructive" /><span className="text-muted-foreground">High (&gt;50%)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-emerald-400" /><span className="text-muted-foreground">Low (&lt;20%)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-400" /><span className="text-muted-foreground">Medium (20-50%)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-rose-400" /><span className="text-muted-foreground">High (&gt;50%)</span></div>
           </div>
         </div>
 
@@ -279,26 +293,33 @@ export function RiskAnalytics({ simulation: _simulation }: RiskAnalyticsProps) {
           </ResponsiveContainer>
         </div>
 
-        {/* Discount Rate Analysis */}
+        {/* Discount Rate Analysis — averaged */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-lg">Discount Rate Analysis</h3>
-              <p className="text-xs text-muted-foreground">Max DD rate vs applied rate vs hurdle — per invoice</p>
+              <p className="text-xs text-muted-foreground">Average rates across {contracts.length} invoices</p>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={rateData} margin={{ top: 5, right: 5, bottom: 20, left: 0 }}>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={rateData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-              <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-30} textAnchor="end" />
-              <YAxis tick={{ fontSize: 9 }} tickFormatter={v => `${v}%`} />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} />
               <Tooltip formatter={(v: number) => `${v}%`} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="maxRate" name="Max DD Rate" fill="#fcd34d" radius={[3,3,0,0]} />
-              <Bar dataKey="appliedRate" name="Applied Rate" fill="#6ee7b7" radius={[3,3,0,0]} />
-              <Bar dataKey="hurdleRate" name="Hurdle Rate" fill="#a5b4fc" radius={[3,3,0,0]} />
+              <Bar dataKey="value" radius={[6,6,0,0]}>
+                {rateData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
+          <div className="mt-3 grid grid-cols-3 gap-3 text-center text-xs">
+            {rateData.map(d => (
+              <div key={d.name} className="bg-muted/20 rounded-lg p-2">
+                <p className="text-muted-foreground">{d.name}</p>
+                <p className="font-mono font-bold mt-0.5" style={{ color: d.fill }}>{d.value}%</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Working Capital */}
@@ -381,7 +402,7 @@ export function RiskAnalytics({ simulation: _simulation }: RiskAnalyticsProps) {
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div className={cn('h-full transition-all duration-700', r.color)}
-                    style={{ width: pdData.length ? `${(r.count / pdData.length) * 100}%` : '0%' }} />
+                    style={{ width: contracts.length ? `${(r.count / contracts.length) * 100}%` : '0%' }} />
                 </div>
               </div>
             ))}
