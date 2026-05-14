@@ -68,6 +68,33 @@ async function main() {
         console.log(`  Invoice: ${grantInfo.invoiceNumber} - ${grantInfo.amount} ${grantInfo.currency}`);
         console.log(``);
         
+        // Write the admit-info file IMMEDIATELY from grantInfo, before any
+        // network call that could throw. grantInfo is always correct (the
+        // grant step just wrote it for THIS negotiation). Previously the
+        // file write was the last statement in the try block, so any error
+        // in the notification/admit steps below skipped it entirely and the
+        // file stayed stale from a previous run -- which is what the UI and
+        // /api/ipex-status read. admitSuccess is updated again at the end.
+        const admitInfoPath = `${taskDataDir}/${receiverAgentName}-ipex-admit-info.json`;
+        const writeAdmitInfo = (ok: boolean) => {
+            const result = {
+                receiver: receiverAgentName,
+                receiverAID: 'pending',
+                sender: senderAgentName,
+                senderAID: 'pending',
+                grantSAID,
+                credentialSAID,
+                admitSuccess: ok,
+                invoiceNumber: grantInfo.invoiceNumber,
+                amount: grantInfo.amount,
+                currency: grantInfo.currency,
+                timestamp: new Date().toISOString(),
+                note: 'Cross-client BRAN scenario - use DEEP-EXT-credential.sh to verify'
+            };
+            fs.writeFileSync(admitInfoPath, JSON.stringify(result, null, 2));
+        };
+        writeAdmitInfo(false);
+        
         // Load sender info
         const senderInfoPath = `${taskDataDir}/${senderAgentName}-info.json`;
         if (!fs.existsSync(senderInfoPath)) {
@@ -152,10 +179,15 @@ async function main() {
             }
         }
         
-        // Save result
+        // Save result — rewrite with the final admitSuccess and real AIDs.
+        // (The file was already written once above so it's never stale even
+        // if the admit attempt above threw.)
+        const finalReceiverAID = receiverClient
+            ? (await receiverClient.identifiers().get(receiverAgentName)).prefix
+            : 'unknown';
         const result = {
             receiver: receiverAgentName,
-            receiverAID: receiverClient ? (await receiverClient.identifiers().get(receiverAgentName)).prefix : 'unknown',
+            receiverAID: finalReceiverAID,
             sender: senderAgentName,
             senderAID: senderPrefix,
             grantSAID,
@@ -168,7 +200,7 @@ async function main() {
             note: 'Cross-client BRAN scenario - use DEEP-EXT-credential.sh to verify'
         };
         
-        fs.writeFileSync(`${taskDataDir}/${receiverAgentName}-ipex-admit-info.json`, JSON.stringify(result, null, 2));
+        fs.writeFileSync(admitInfoPath, JSON.stringify(result, null, 2));
         
     } catch (error: any) {
         console.log(`  Error: ${error.message?.substring(0, 80)}`);

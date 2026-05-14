@@ -866,28 +866,54 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
           setBuyerSectionFetchedAgents(prev => ({ ...prev, seller: false }));
         }
       }, 500);
-    } else if (parsed.intent === 'verify_agent' && parsed.entity === 'seller') {
-      addBuyerUserMsg(command);
-      // Gate: must fetch seller agent card first
-      if (!buyerSectionFetchedAgents.seller) {
-        addBuyerSystem('⚠️ Fetch the seller agent first before verifying.\nType: "fetch seller agent"', 'system');
-        return;
-      }
-      setBuyerVerificationStep(1);
-      setBuyerVerificationResult(null);
-      setBuyerPipelineVisible(true);
-      addBuyerSystem('🔐 Contacting vLEI api-server (:4000) — verifying seller delegation chain...', 'verification');
-      verifyAgent('buyer', 'seller').then(result => {
-        setBuyerVerificationStep(4);
-        setBuyerVerificationResult(result);
-        if (result.success) {
-          addBuyerSystem('✅ Seller delegation chain VERIFIED — ready to negotiate', 'system');
-          // Hide pipeline 6s after verification completes
-          setTimeout(() => setBuyerPipelineVisible(false), 6000);
-        } else {
-          addBuyerSystem(`❌ Verification FAILED — ${result.error ?? 'Unknown error'}\n⚠️ Is vLEI running? Check api-server on :4000`, 'verification');
-        }
-      });
+      } else if (parsed.intent === 'verify_agent' && parsed.entity === 'seller') {
+        addBuyerUserMsg(command);
+        const endpoint = 'http://localhost:4000/api/buyer/verify/ext/seller';
+        addBuyerSystem(`🔐 Calling ${endpoint} ...`, 'verification');
+        setBuyerVerificationStep(1);
+
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+          .then(async (res) => {
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.success) {
+              addBuyerSystem('🔍 Step 1: Found ✓', 'verification');
+              setBuyerVerificationStep(2);
+              addBuyerSystem('📦 Step 2: Fetched ✓', 'verification');
+              setBuyerVerificationStep(3);
+              addBuyerSystem('🔄 Step 3: Checked ✓', 'verification');
+              setBuyerVerificationStep(4);
+              addBuyerSystem('✅ Step 4: Verified ✓', 'verification');
+              addBuyerSystem('🎉 Seller Agent Verified by Buyer - Complete', 'system');
+              addBuyerSystem('✅ Agent authentication complete! Ready for secure transactions.', 'system');
+              // ── Persist verification result so the negotiation gate opens ───
+              // Synthesize an `output` string from the verification.* booleans so
+              // GleifPipeline (which scans output for step phrases) lights up green.
+              const v = (data as any)?.verification ?? {};
+              const synthesizedOutput = [
+                v.step1_info_loaded          ? 'Step 1: AIDs loaded'                : '',
+                v.step2_di_verified          ? 'Step 2: Delegation field verified'  : '',
+                v.step3_seal_found           ? 'Step 3: Delegation seal verified'   : '',
+                v.step4_digest_verified      ? 'Step 4: Seal digest verified'       : '',
+                v.step5_public_key_available ? 'Step 5: Public key found'           : '',
+              ].filter(Boolean).join('\n');
+              setBuyerVerificationResult({ ...(data as any), output: synthesizedOutput });
+              setBuyerPipelineVisible(true);
+            } else {
+              addBuyerSystem(`✗ Verification failed: ${data.error || `HTTP ${res.status}`}`, 'verification');
+              setBuyerVerificationResult({ ...(data as any), success: false });
+              setBuyerPipelineVisible(true);
+            }
+          })
+          .catch((err) => {
+            addBuyerSystem(`✗ Could not reach API server at :4000 — ${err.message}`, 'verification');
+            setBuyerVerificationResult({ success: false, error: err.message } as any);
+          })
+          .finally(() => setBuyerVerificationStep(0));
+
     } else if (parsed.intent === 'start_simulation') {
       addBuyerUserMsg(command);
       setTimeout(() => {
@@ -931,26 +957,53 @@ export function AgentCenter({ simulation }: AgentCenterProps) {
         }, 1000);
       }, 500);
     } else if (parsed.intent === 'verify_agent' && parsed.entity === 'buyer') {
-      addSellerSystem(command, 'user');
-      // Gate: must fetch buyer agent card first
-      if (!sellerSectionFetchedAgents.buyer) {
-        addSellerSystem('⚠️ Fetch the buyer agent first before verifying.\nType: "fetch buyer agent"', 'system');
-        return;
-      }
-      setSellerVerificationStep(1);
-      setSellerVerificationResult(null);
-      setSellerPipelineVisible(true);
-      addSellerSystem('🔐 Contacting vLEI api-server (:4000) — verifying buyer delegation chain...', 'verification');
-      verifyAgent('seller', 'buyer').then(result => {
-        setSellerVerificationStep(4);
-        setSellerVerificationResult(result);
-        if (result.success) {
-          addSellerSystem('✅ Buyer delegation chain VERIFIED — ready to negotiate', 'system');
-          setTimeout(() => setSellerPipelineVisible(false), 6000);
-        } else {
-          addSellerSystem(`❌ Verification FAILED — ${result.error ?? 'Unknown error'}\n⚠️ Is vLEI running? Check api-server on :4000`, 'verification');
-        }
-      });
+          addSellerSystem(command, 'user');
+          const endpoint = 'http://localhost:4000/api/seller/verify/ext/buyer';
+          addSellerSystem(`🔐 Calling ${endpoint} ...`, 'verification');
+          setSellerVerificationStep(1);
+
+          fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+          })
+            .then(async (res) => {
+              const data = await res.json().catch(() => ({}));
+              if (res.ok && data.success) {
+                addSellerSystem('🔍 Step 1: Found ✓', 'verification');
+                setSellerVerificationStep(2);
+                addSellerSystem('📦 Step 2: Fetched ✓', 'verification');
+                setSellerVerificationStep(3);
+                addSellerSystem('🔄 Step 3: Checked ✓', 'verification');
+                setSellerVerificationStep(4);
+                addSellerSystem('✅ Step 4: Verified ✓', 'verification');
+                addSellerSystem('🎉 Buyer Agent Verified by Seller - Complete', 'system');
+                addSellerSystem('✅ Agent authentication complete! Ready for secure transactions.', 'system');
+                // ── Persist verification result so the negotiation gate opens ───
+                // Synthesize an `output` string from the verification.* booleans so
+                // GleifPipeline (which scans output for step phrases) lights up green.
+                const v = (data as any)?.verification ?? {};
+                const synthesizedOutput = [
+                  v.step1_info_loaded          ? 'Step 1: AIDs loaded'                : '',
+                  v.step2_di_verified          ? 'Step 2: Delegation field verified'  : '',
+                  v.step3_seal_found           ? 'Step 3: Delegation seal verified'   : '',
+                  v.step4_digest_verified      ? 'Step 4: Seal digest verified'       : '',
+                  v.step5_public_key_available ? 'Step 5: Public key found'           : '',
+                ].filter(Boolean).join('\n');
+                setSellerVerificationResult({ ...(data as any), output: synthesizedOutput });
+                setSellerPipelineVisible(true);
+              } else {
+                addSellerSystem(`✗ Verification failed: ${data.error || `HTTP ${res.status}`}`, 'verification');
+                setSellerVerificationResult({ ...(data as any), success: false });
+                setSellerPipelineVisible(true);
+              }
+            })
+            .catch((err) => {
+              addSellerSystem(`✗ Could not reach API server at :4000 — ${err.message}`, 'verification');
+              setSellerVerificationResult({ success: false, error: err.message } as any);
+            })
+            .finally(() => setSellerVerificationStep(0));
+            
     } else if (parsed.intent === 'start_simulation') {
       addSellerSystem(command, 'user');
       setTimeout(() => {

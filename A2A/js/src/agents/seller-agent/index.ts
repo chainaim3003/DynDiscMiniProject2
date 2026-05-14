@@ -644,9 +644,38 @@ class SellerAgentExecutor implements AgentExecutor {
 
     logger.printPurchaseOrder(data);
 
-    // ── Step 1: Send the standard full invoice (existing behavior) ────────────
+    // ── Step 1: IPEX issue+grant FIRST so credential is pending in buyer's mailbox ──
+    //         (must happen BEFORE sendInvoice, otherwise the buyer's admit
+    //         fires before the grant exists and picks up stale credentials)
     const invoiceId = `INV-${Date.now()}`;
+    try {
+      const ipexSubtotal = state.agreedPrice! * state.quantity;
+      const ipexTax      = Math.round(ipexSubtotal * 0.18);
+      logInternal(`[IPEX] Issuing invoice credential and granting to buyer (${invoiceId})...`);
+      const ipexResp = await fetch("http://localhost:4000/api/seller/ipex/issue-and-grant", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invoiceId,
+          totalAmount:   ipexSubtotal + ipexTax,
+          currency:      "INR",
+          pricePerUnit:  state.agreedPrice,
+          quantity:      state.quantity,
+          paymentTerms:  `Net ${SELLER_CONFIG.dd.paymentTermsDays} days`,
+          negotiationId: state.negotiationId,
+          type:          "INVOICE",
+        }),
+      });
+      const ipexData = await ipexResp.json() as any;
+      if (ipexData.success) logInternal(`[IPEX] ✅ Invoice credential issued & granted — SAID: ${ipexData.credentialSAID}`);
+      else                  logInternal(`[IPEX] ⚠ Invoice credential failed: ${ipexData.error ?? "unknown"}`);
+    } catch (ipexErr: any) {
+      logInternal(`[IPEX] ⚠ Invoice IPEX error: ${ipexErr?.message ?? ipexErr}`);
+    }
+
+    // ── Step 2: Now send the A2A invoice message — buyer will admit the pending grant ──
     await this.sendInvoice(state, data.poId, invoiceId, logger, contextId);
+
     state.status = "COMPLETED";
 
     // ── Step 2: Compute safe DD rate from seller's margin ─────────────────────
@@ -837,6 +866,30 @@ class SellerAgentExecutor implements AgentExecutor {
 
     logger.printDDInvoice(ddInvoice);
     state.status = "DD_COMPLETED";
+
+    // ── IPEX: issue DD invoice credential and grant to buyer ──
+    try {
+      logInternal(`[IPEX] Issuing DD invoice credential and granting to buyer (${data.invoiceId})...`);
+      const ipexResp = await fetch("http://localhost:4000/api/seller/ipex/issue-and-grant", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invoiceId:     data.invoiceId,
+          totalAmount:   ddResult.discountedAmount,
+          currency:      "INR",
+          pricePerUnit:  state.agreedPrice,
+          quantity:      state.quantity,
+          paymentTerms:  `Early payment by ${data.chosenSettlementDate}`,
+          negotiationId: state.negotiationId,
+          type:          "DD_INVOICE",
+        }),
+      });
+      const ipexData = await ipexResp.json() as any;
+      if (ipexData.success) logInternal(`[IPEX] ✅ DD Invoice credential issued & granted — SAID: ${ipexData.credentialSAID}`);
+      else                  logInternal(`[IPEX] ⚠ DD Invoice credential failed: ${ipexData.error ?? "unknown"}`);
+    } catch (ipexErr: any) {
+      logInternal(`[IPEX] ⚠ DD Invoice IPEX error: ${ipexErr?.message ?? ipexErr}`);
+    }
 
     this.respond(
       bus, taskId, contextId,

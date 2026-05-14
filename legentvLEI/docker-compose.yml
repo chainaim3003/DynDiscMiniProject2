@@ -94,6 +94,7 @@ services:
   keria:
     <<: *keria-image
     stop_grace_period: 1s
+    restart: unless-stopped  # ← KERIA 0.3.0 has a known crash bug; auto-restart on failure
     environment:
       <<: *python-envs
       KERI_AGENT_CORS: "True"

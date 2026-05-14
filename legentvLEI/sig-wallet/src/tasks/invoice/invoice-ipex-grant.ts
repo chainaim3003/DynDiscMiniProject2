@@ -99,29 +99,44 @@ try {
     // Get the self-attested invoice credential
     console.log(`[5/7] Retrieving self-attested invoice credential...`);
     
-    // Find the invoice credential
-    const credentials = await senderClient.credentials().list({ filter: {} });
-    console.log(`  Found ${credentials.length} credential(s) in sender's KERIA`);
-    
-    // Find the most recent invoice credential
     let invoiceCred: any = null;
-    for (const cred of credentials) {
-        console.log(`  - Credential: ${cred.sad?.d}, Schema: ${cred.sad?.s}`);
-        // Check if it's an invoice credential (by schema or content)
-        if (cred.sad?.a?.invoiceNumber || cred.sad?.a?.totalAmount) {
-            invoiceCred = cred;
-            break;
-        }
-    }
     
-    // Also check for any credential that was self-issued
-    if (!invoiceCred) {
-        const credInfoPath = `${taskDataDir}/${senderAgentName}-self-invoice-credential-info.json`;
-        if (fs.existsSync(credInfoPath)) {
-            const credInfo = JSON.parse(fs.readFileSync(credInfoPath, 'utf-8'));
-            const matchingCreds = await findMatchingCredentials(senderClient, { '-d': credInfo.said });
+    // PRIMARY: Use the SAID written by the issue step that just ran.
+    // This is the ONLY reliable way to grant the credential for THIS
+    // negotiation. Scanning credentials().list() and taking the first
+    // match grabs whatever the oldest invoice credential is (usually a
+    // stale sample from bootstrap), not the one just issued.
+    const credInfoPath = `${taskDataDir}/${senderAgentName}-self-invoice-credential-info.json`;
+    if (fs.existsSync(credInfoPath)) {
+        const credInfo = JSON.parse(fs.readFileSync(credInfoPath, 'utf-8'));
+        const freshSaid = credInfo.said;
+        console.log(`  Issue step wrote credential SAID: ${freshSaid}`);
+        try {
+            invoiceCred = await senderClient.credentials().get(freshSaid);
+            console.log(`  ✓ Loaded the freshly-issued credential by SAID`);
+        } catch (e: any) {
+            console.log(`  Could not get credential ${freshSaid} directly: ${e.message}`);
+            const matchingCreds = await findMatchingCredentials(senderClient, { '-d': freshSaid });
             if (matchingCreds.length > 0) {
                 invoiceCred = matchingCreds[0];
+                console.log(`  ✓ Loaded the freshly-issued credential via findMatchingCredentials`);
+            }
+        }
+    } else {
+        console.log(`  Note: cred-info file not found at ${credInfoPath}`);
+    }
+    
+    // FALLBACK: only if the cred-info file was missing/unreadable.
+    // Scan the KERIA credential list for any invoice credential.
+    if (!invoiceCred) {
+        console.log(`  Falling back to scanning sender's KERIA credential list...`);
+        const credentials = await senderClient.credentials().list({ filter: {} });
+        console.log(`  Found ${credentials.length} credential(s) in sender's KERIA`);
+        for (const cred of credentials) {
+            console.log(`  - Credential: ${cred.sad?.d}, Schema: ${cred.sad?.s}`);
+            if (cred.sad?.a?.invoiceNumber || cred.sad?.a?.totalAmount) {
+                invoiceCred = cred;
+                break;
             }
         }
     }

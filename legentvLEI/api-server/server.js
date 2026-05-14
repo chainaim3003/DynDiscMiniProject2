@@ -20,6 +20,67 @@ app.use(cors());
 app.use(express.json());
 
 // ============================================
+// 🎨 A2A-style request/response logger
+// Logs every /api/* and /health hit with timestamps, badges, body, and key
+// response fields — same visual style as the A2A negotiation stream.
+// ============================================
+const C = {
+  r: '\x1b[0m', b: '\x1b[1m', d: '\x1b[2m',
+  red: '\x1b[31m', grn: '\x1b[32m', ylw: '\x1b[33m',
+  cyn: '\x1b[36m', gry: '\x1b[90m',
+};
+const _ts = () => {
+  const d = new Date();
+  return d.toTimeString().slice(0, 8) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+};
+const _badge = (p) => {
+  if (p.includes('/buyer/verify/ext/seller'))     return `${C.cyn}🔵 BUYER${C.r} ${C.gry}→${C.r} ${C.grn}🟢 SELLER${C.r}  ${C.d}(DEEP-EXT)${C.r}`;
+  if (p.includes('/seller/verify/ext/buyer'))     return `${C.grn}🟢 SELLER${C.r} ${C.gry}→${C.r} ${C.cyn}🔵 BUYER${C.r}  ${C.d}(DEEP-EXT)${C.r}`;
+  if (p.includes('/buyer/verify/seller'))         return `${C.cyn}🔵 BUYER${C.r} ${C.gry}→${C.r} ${C.grn}🟢 SELLER${C.r}  ${C.d}(DEEP)${C.r}`;
+  if (p.includes('/seller/verify/buyer'))         return `${C.grn}🟢 SELLER${C.r} ${C.gry}→${C.r} ${C.cyn}🔵 BUYER${C.r}  ${C.d}(DEEP)${C.r}`;
+  if (p.includes('/buyer/verify/sellerInvoice'))  return `${C.cyn}🔵 BUYER${C.r} ${C.gry}→${C.r} ${C.grn}🟢 SELLER${C.r}  ${C.d}(DEEP-EXT-CREDENTIAL)${C.r}`;
+  if (p.includes('/seller/ipex/issue-and-grant')) return `${C.grn}🟢 SELLER${C.r}  ${C.ylw}📤 IPEX GRANT${C.r}`;
+  if (p.includes('/buyer/ipex/admit'))            return `${C.cyn}🔵 BUYER${C.r}   ${C.ylw}📥 IPEX ADMIT${C.r}`;
+  if (p.includes('/ipex-status'))                 return `${C.gry}📥 IPEX STATUS${C.r}`;
+  if (p.includes('/status'))                      return `${C.gry}📊 WORKFLOW STATUS${C.r}`;
+  if (p.includes('/health'))                      return `${C.gry}❤  HEALTH${C.r}`;
+  return p;
+};
+
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api') && req.path !== '/health') return next();
+  const start = Date.now();
+  const id = Math.random().toString(36).slice(2, 8);
+
+  console.log('');
+  console.log(`${C.gry}┌─ ${C.r}${C.d}${_ts()}${C.r}  ${C.b}${req.method}${C.r} ${C.cyn}${req.path}${C.r}  ${C.gry}#${id}${C.r}`);
+  console.log(`${C.gry}│  ${C.r}${_badge(req.path)}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    const body = JSON.stringify(req.body);
+    console.log(`${C.gry}│  ${C.r}${C.d}body:${C.r} ${body.length > 200 ? body.slice(0, 200) + '…' : body}`);
+  }
+
+  const _json = res.json.bind(res);
+  res.json = (data) => {
+    const dur = Date.now() - start;
+    const ok = data?.success === true || (res.statusCode >= 200 && res.statusCode < 300 && data?.success !== false);
+    const icon = ok ? `${C.grn}✅ SUCCESS${C.r}` : `${C.red}❌ FAILED${C.r}`;
+
+    if (data?.agent)          console.log(`${C.gry}│  ${C.r}${C.d}agent       :${C.r} ${data.agent}`);
+    if (data?.oorHolder)      console.log(`${C.gry}│  ${C.r}${C.d}oorHolder   :${C.r} ${data.oorHolder}`);
+    if (data?.credentialSAID) console.log(`${C.gry}│  ${C.r}${C.d}credSAID    :${C.r} ${data.credentialSAID}`);
+    if (data?.grantSAID)      console.log(`${C.gry}│  ${C.r}${C.d}grantSAID   :${C.r} ${data.grantSAID}`);
+    if (data?.admitSAID)      console.log(`${C.gry}│  ${C.r}${C.d}admitSAID   :${C.r} ${data.admitSAID}`);
+    if (data?.invoiceId)      console.log(`${C.gry}│  ${C.r}${C.d}invoiceId   :${C.r} ${data.invoiceId}`);
+    if (!ok && data?.error)   console.log(`${C.gry}│  ${C.r}${C.red}error       :${C.r} ${String(data.error).slice(0, 200)}`);
+    console.log(`${C.gry}└─ ${C.r}${icon}  ${C.d}${res.statusCode} · ${dur}ms · #${id}${C.r}`);
+    return _json(data);
+  };
+
+  next();
+});
+
+// ============================================
 // Helper: Run a shell script in legentvLEI/ directory
 // IMPORTANT: All commands must use RELATIVE paths (./)
 // because bash on Windows can't handle absolute paths with spaces
@@ -35,9 +96,9 @@ async function runShellScript(command, timeoutMs = 120000) {
 }
 
 // Helper: Run verification script
-async function runVerification(agentName, oorHolderName, scriptType = 'DEEP') {
+async function runVerification(agentName, oorHolderName, scriptType = 'DEEP', callerAgent = 'unknown', endpoint = 'unknown') {
   try {
-    console.log(`Starting ${scriptType} verification for: ${agentName}`);
+    console.log(`[${endpoint}] Starting ${scriptType} verification of: ${agentName} by ${callerAgent}`);
     let scriptName;
     if (scriptType === 'DEEP-EXT-CREDENTIAL') scriptName = 'test-agent-verification-DEEP-credential.sh';
     else if (scriptType === 'DEEP-EXT') scriptName = 'test-agent-verification-DEEP-EXT.sh';
@@ -229,7 +290,8 @@ app.post('/api/seller/verify/buyer', async (req, res) => {
 app.post('/api/buyer/verify/ext/seller', async (req, res) => {
   console.log('=== BUYER -> SELLER VERIFICATION (DEEP-EXT) ===');
   try {
-    const result = await runVerification('jupiterSellerAgent', 'Jupiter_Chief_Sales_Officer', 'DEEP-EXT');
+    const endpoint = `http://localhost:${PORT}${req.originalUrl}`;
+    const result = await runVerification('jupiterSellerAgent', 'Jupiter_Chief_Sales_Officer', 'DEEP-EXT', 'tommyBuyerAgent', endpoint);
     result.verificationType = 'EXTERNAL'; result.verificationScript = 'DEEP-EXT'; result.caller = 'buyer'; result.target = 'seller';
     res.status(result.success ? 200 : 400).json(result);
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
@@ -238,7 +300,7 @@ app.post('/api/buyer/verify/ext/seller', async (req, res) => {
 app.post('/api/seller/verify/ext/buyer', async (req, res) => {
   console.log('=== SELLER -> BUYER VERIFICATION (DEEP-EXT) ===');
   try {
-    const result = await runVerification('tommyBuyerAgent', 'Tommy_Chief_Procurement_Officer', 'DEEP-EXT');
+    const result = await runVerification('tommyBuyerAgent', 'Tommy_Chief_Procurement_Officer', 'DEEP-EXT', 'jupiterSellerAgent');
     result.verificationType = 'EXTERNAL'; result.verificationScript = 'DEEP-EXT'; result.caller = 'seller'; result.target = 'buyer';
     res.status(result.success ? 200 : 400).json(result);
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
@@ -247,18 +309,16 @@ app.post('/api/seller/verify/ext/buyer', async (req, res) => {
 app.post('/api/buyer/verify/sellerInvoice', async (req, res) => {
   console.log('=== BUYER -> SELLER INVOICE CREDENTIAL VERIFICATION (DEEP-EXT-CREDENTIAL) ===');
   try {
-    const result = await runVerification('jupiterSellerAgent', 'Jupiter_Chief_Sales_Officer', 'DEEP-EXT-CREDENTIAL');
-    result.verificationType = 'INVOICE_CREDENTIAL'; result.verificationScript = 'DEEP-EXT-CREDENTIAL'; result.caller = 'buyer'; result.target = 'sellerInvoice';
-    res.status(result.success ? 200 : 400).json(result);
+    const endpoint = `http://localhost:${PORT}${req.originalUrl}`;
+    const result = await runVerification('jupiterSellerAgent', 'Jupiter_Chief_Sales_Officer', 'DEEP-EXT-CREDENTIAL', 'tommyBuyerAgent', endpoint);    res.status(result.success ? 200 : 400).json(result);
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
 // Legacy endpoints
 app.post('/api/verify/seller', async (req, res) => { const r = await runVerification('jupiterSellerAgent', 'Jupiter_Chief_Sales_Officer'); r.deprecated = true; res.status(r.success ? 200 : 400).json(r); });
 app.post('/api/verify/buyer', async (req, res) => { const r = await runVerification('tommyBuyerAgent', 'Tommy_Chief_Procurement_Officer'); r.deprecated = true; res.status(r.success ? 200 : 400).json(r); });
-app.post('/api/verify/ext/seller', async (req, res) => { const r = await runVerification('jupiterSellerAgent', 'Jupiter_Chief_Sales_Officer', 'DEEP-EXT'); r.deprecated = true; res.status(r.success ? 200 : 400).json(r); });
-app.post('/api/verify/ext/buyer', async (req, res) => { const r = await runVerification('tommyBuyerAgent', 'Tommy_Chief_Procurement_Officer', 'DEEP-EXT'); r.deprecated = true; res.status(r.success ? 200 : 400).json(r); });
-
+app.post('/api/verify/ext/seller', async (req, res) => { const r = await runVerification('jupiterSellerAgent', 'Jupiter_Chief_Sales_Officer', 'DEEP-EXT', 'tommyBuyerAgent', `http://localhost:${PORT}${req.originalUrl}`); r.deprecated = true; res.status(r.success ? 200 : 400).json(r); });
+app.post('/api/verify/ext/buyer', async (req, res) => { const r = await runVerification('tommyBuyerAgent', 'Tommy_Chief_Procurement_Officer', 'DEEP-EXT', 'jupiterSellerAgent', `http://localhost:${PORT}${req.originalUrl}`); r.deprecated = true; res.status(r.success ? 200 : 400).json(r); });
 // ============================================
 // IPEX ENDPOINTS — Invoice Credential Exchange
 // ============================================

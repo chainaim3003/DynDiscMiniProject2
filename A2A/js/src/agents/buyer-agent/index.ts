@@ -213,6 +213,26 @@ class BuyerAgentExecutor implements AgentExecutor {
       await this.handleDDInvoice(data as DDInvoiceData, state, logger, bus, taskId, contextId);
       return;
     }
+    if (data.type === "INVOICE") {
+      // ── IPEX: admit the invoice credential the seller granted ──
+      try {
+        logInternal(`[IPEX] Admitting invoice credential from seller (${(data as any).invoiceId})...`);
+        const admitResp = await fetch("http://localhost:4000/api/buyer/ipex/admit", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            senderAgent: "jupiterSellerAgent",
+            invoiceId:   (data as any).invoiceId,
+          }),
+        });
+        const admitData = await admitResp.json() as any;
+        if (admitData.success) logInternal(`[IPEX] ✅ Invoice credential admitted — SAID: ${admitData.admitSAID}`);
+        else                   logInternal(`[IPEX] ⚠ Invoice credential admit failed: ${admitData.error ?? "unknown"}`);
+      } catch (ipexErr: any) {
+        logInternal(`[IPEX] ⚠ Invoice IPEX admit error: ${ipexErr?.message ?? ipexErr}`);
+      }
+      return;
+    }
     if (!state || !logger) { logInternal(`Negotiation state not found: ${negotiationId}`); return; }
 
     if (data.type === "ACCEPT_OFFER")
@@ -614,6 +634,24 @@ class BuyerAgentExecutor implements AgentExecutor {
     taskId:  string,
     contextId: string
   ) {
+    // ── IPEX: admit the DD invoice credential the seller granted ──
+    try {
+      logInternal(`[IPEX] Admitting DD invoice credential from seller (${data.invoiceId})...`);
+      const admitResp = await fetch("http://localhost:4000/api/buyer/ipex/admit", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderAgent: "jupiterSellerAgent",
+          invoiceId:   data.invoiceId,
+        }),
+      });
+      const admitData = await admitResp.json() as any;
+      if (admitData.success) logInternal(`[IPEX] ✅ DD Invoice credential admitted — SAID: ${admitData.admitSAID}`);
+      else                   logInternal(`[IPEX] ⚠ DD Invoice credential admit failed: ${admitData.error ?? "unknown"}`);
+    } catch (ipexErr: any) {
+      logInternal(`[IPEX] ⚠ DD Invoice IPEX admit error: ${ipexErr?.message ?? ipexErr}`);
+    }
+
     const pct         = (data.appliedRate * 100).toFixed(3);
     const actusStatus = data.actusSimulationStatus === "SUCCESS" ? "✓" : "⚠";
 

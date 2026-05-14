@@ -70,26 +70,26 @@
       "lei": "3358004DXAMRWRUIYJ05",
       "legalEntityName": "JUPITER KNITTING COMPANY",
       "registryName": "JUPITER_REGISTRY",
-      "qvi": "EP2S_kKiiLVQGVhYrhaPXSW7xsh2tNZL9wIOyTXOMJyr",
+      "qvi": "EDPOYjxh_OL1GRv68p8JvGrCdk79nV1LKLLXAby5ASKF",
       "officialRole": "ChiefSalesOfficer",
       "engagementRole": "Seller Agent"
     },
     "vLEImetadata": {
-      "delegatorAID": "EC10Jrv6FPRvKXh3-mQyNbGCfiSWW7V1xlxAjBRd88Wb",
-      "delegateeAID": "ENR7Xj2xCtdwMUAbCbBHYSu1Iv029w2qtc_zjLyo740b",
-      "delegatorSAID": "EOjR5deBPCmFAW-kELbtafp-9TMPHEbcystcHgT0gabp",
-      "delegateeSAID": "ENR7Xj2xCtdwMUAbCbBHYSu1Iv029w2qtc_zjLyo740b",
-      "delegatorOOBI": "http://keria:3902/oobi/EC10Jrv6FPRvKXh3-mQyNbGCfiSWW7V1xlxAjBRd88Wb/agent/EKtCN8-Uo_cw3UmOHjojEekRJSuWHKcto2_SpkSrtlwC",
-      "delegateeOOBI": "http://keria:3902/oobi/ENR7Xj2xCtdwMUAbCbBHYSu1Iv029w2qtc_zjLyo740b/agent/EFvyxeO5N3zRb0H5ccoo82u5zziT3Oq4ZhK19_ib6uo9",
-      "leAID": "EIR5BSccQ2YikL78K54jUyQr8xEKb-rEalPWRyUSlQF5",
-      "leOOBI": "http://keria:3902/oobi/EIR5BSccQ2YikL78K54jUyQr8xEKb-rEalPWRyUSlQF5/agent/EFRvTr6EbLvvort0r7745suVcu2MHpuNncFsxpeOc245",
+      "delegatorAID": "EIRajN4ZqHCNNVqkBoLqCpsHhkTYpxldxknG_Cu4zCNn",
+      "delegateeAID": "ELcNZytOLcmgApfgpqi1kO2vFvhNRx6T_9W__ZLJ1O_C",
+      "delegatorSAID": "EK5H8PIx1WPnhXrWhj6rbtm81BC3ziHxNni6U9SkO72O",
+      "delegateeSAID": "ELcNZytOLcmgApfgpqi1kO2vFvhNRx6T_9W__ZLJ1O_C",
+      "delegatorOOBI": "http://keria:3902/oobi/EIRajN4ZqHCNNVqkBoLqCpsHhkTYpxldxknG_Cu4zCNn/agent/EGtuJ2RlJj-FTtDO7VlwYOQn2a-_3pLO86yJkesZ-K0j",
+      "delegateeOOBI": "http://keria:3902/oobi/ELcNZytOLcmgApfgpqi1kO2vFvhNRx6T_9W__ZLJ1O_C/agent/EDvP8QF4Oui5N4XWvkElahA3CmEIdKJ4BzNFS_QwRLOM",
+      "leAID": "EIKsNCwaMpmeBZcCIQ8t3htTPerkL8AP4wV5DOuVEVCo",
+      "leOOBI": "http://keria:3902/oobi/EIKsNCwaMpmeBZcCIQ8t3htTPerkL8AP4wV5DOuVEVCo/agent/EA8kjsP0m26HlJNeued623zdNMvKJkErlz-jHb2OYDB2",
       "verificationPath": [
         "GLEIF_ROOT → QVI",
         "QVI → JUPITER KNITTING COMPANY → Chief Sales Officer → jupiterSellerAgent"
       ],
       "status": "verified",
       "verificationEndpoint": "http://vlei-verification:9723/verify/agent-delegation",
-      "timestamp": "2026-04-04T18:49:57.562Z",
+      "timestamp": "2026-05-14T05:25:23.329Z",
       "agentName": "jupiterSellerAgent",
       "oorHolderName": "Jupiter_Chief_Sales_Officer"
     },
@@ -97,10 +97,10 @@
       "gleifVerificationEndpoint": "https://gleif.org/api/v1/lei/3358004DXAMRWRUIYJ05"
     },
     "keriIdentifiers": {
-      "agentAID": "ENR7Xj2xCtdwMUAbCbBHYSu1Iv029w2qtc_zjLyo740b",
-      "oorHolderAID": "EC10Jrv6FPRvKXh3-mQyNbGCfiSWW7V1xlxAjBRd88Wb",
-      "legalEntityAID": "EIR5BSccQ2YikL78K54jUyQr8xEKb-rEalPWRyUSlQF5",
-      "qviAID": "EP2S_kKiiLVQGVhYrhaPXSW7xsh2tNZL9wIOyTXOMJyr"
+      "agentAID": "ELcNZytOLcmgApfgpqi1kO2vFvhNRx6T_9W__ZLJ1O_C",
+      "oorHolderAID": "EIRajN4ZqHCNNVqkBoLqCpsHhkTYpxldxknG_Cu4zCNn",
+      "legalEntityAID": "EIKsNCwaMpmeBZcCIQ8t3htTPerkL8AP4wV5DOuVEVCo",
+      "qviAID": "EDPOYjxh_OL1GRv68p8JvGrCdk79nV1LKLLXAby5ASKF"
     }
   }
 }
